@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Behavioural OKR Framework — Abdelmalek Nouri</title>
+<meta name="description" content="Bottom-up KPI decomposition framework: breaks company KPIs down through marketplace, requester, and driver segments to behavioural contribution per user. Connects Paid Acquisition, Activation, and CRM teams to segment targets with CAC × LTV budget constraints.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Behavioural OKR Framework</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-analytics">Analytics</span>
+        <span class="project-tag project-tag-secondary">2025</span>
+        <span class="project-tag project-tag-secondary">Heetch</span>
+      </div>
+      <h1 class="project-h1">Behavioural <em>OKR</em> Framework.</h1>
+      <p class="project-context">
+        Bottom-up KPI decomposition framework for Heetch's Growth org. Breaks the 3 company
+        KPIs (rides, GMV, revenue) down through marketplace × requester × driver segments to
+        <strong>behavioural contribution per user per day</strong>. Connects Paid Acquisition,
+        Activation, and CRM teams to segment-level targets, with CAC × LTV budget constraints
+        making the system financially closed-loop. Owned end-to-end as primary data partner
+        to the VP of Growth.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Company</div>
+          <div class="meta-cell-value">Heetch</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Role</div>
+          <div class="meta-cell-value">Primary Data Partner</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Stakeholder</div>
+          <div class="meta-cell-value">VP of Growth</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Year</div>
+          <div class="meta-cell-value">2025</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The problem -->
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        Growth orgs typically set top-down OKRs: "we need X rides this quarter." Then three
+        teams — Paid Acquisition, Activation, CRM — each get a piece of the goal and try to
+        deliver. The problem is that the link between team activity and the top-line number is
+        <strong>opaque</strong>. Did CRM hit its sub-target because reactivation worked, or
+        because Paid Acquisition brought in a high-quality cohort that month? Why did the
+        company miss the rides target despite every team hitting its own KR?
+      </p>
+      <p>
+        The root cause is that top-down OKRs aren't grounded in the actual <strong>behavioural
+        mechanics of the marketplace</strong>. A ride happens because:
+      </p>
+      <ul>
+        <li>A passenger of some behavioural segment requests a ride at their characteristic frequency.</li>
+        <li>A driver of some segment is active at that moment to serve the request.</li>
+        <li>The match is successful — supply and demand met at an acceptable price.</li>
+      </ul>
+      <p>
+        If you don't model these mechanics explicitly, you can't tell which lever to pull. The
+        framework I built reverses the direction: <strong>start from behaviour at the segment
+        level and roll up to the company KPI</strong>. That makes every number directly
+        actionable by a specific team.
+      </p>
+    </section>
+
+    <!-- Framework -->
+    <section class="proj-section">
+      <h2>The framework: bottom-up KPI decomposition</h2>
+
+      <h3>Step 1 — Anchor in behavioural contribution</h3>
+      <p>
+        For every passenger and driver segment from the segmentation pipeline, compute the
+        <strong>behavioural contribution per user per day</strong>:
+      </p>
+      <div class="code-block"><span class="c-comment"># Passenger behaviour: rides per user per day</span>
+Hero passenger     → <span class="c-num">1</span> ride every <span class="c-num">10</span> days  = <span class="c-num">0.10</span> rides/user/day
+Frequent passenger → <span class="c-num">1</span> ride every <span class="c-num">20</span> days  = <span class="c-num">0.05</span> rides/user/day
+Occasional         → <span class="c-num">1</span> ride every <span class="c-num">45</span> days  = <span class="c-num">0.022</span> rides/user/day
+Rare               → <span class="c-num">1</span> ride every <span class="c-num">120</span> days = <span class="c-num">0.008</span> rides/user/day
+
+<span class="c-comment"># Driver behaviour: rides served per active driver per day</span>
+Power driver    = <span class="c-num">12</span> rides/driver/day
+Regular driver  = <span class="c-num">6</span>  rides/driver/day
+Casual driver   = <span class="c-num">2</span>  rides/driver/day</div>
+      <p>
+        These contribution rates are <strong>measured, not assumed</strong> — pulled directly
+        from the segmentation pipeline rolling-window averages. They're refreshed weekly so
+        the framework adapts as behaviour shifts.
+      </p>
+
+      <h3>Step 2 — Build the demand equation</h3>
+      <p>
+        Working backwards from the rides target:
+      </p>
+      <div class="code-block"><span class="c-comment"># Want: 700,000 rides this week (= 100k/day)</span>
+
+target_rides_per_day = <span class="c-num">100_000</span>
+
+<span class="c-comment"># Decompose by passenger segment, given their behavioural contribution:</span>
+required_active_passengers = sum(
+    target_rides_per_day_in_segment_i / contribution_rate_i
+    for segment_i in passenger_segments
+)
+
+<span class="c-comment"># For one segment (Hero): if 30% of demand comes from Heroes contributing 0.10 rides/day:</span>
+hero_demand = <span class="c-num">100_000</span> * <span class="c-num">0.30</span> = <span class="c-num">30_000</span> rides/day
+hero_active_users_needed = <span class="c-num">30_000</span> / <span class="c-num">0.10</span> = <span class="c-num">300_000</span> active Heroes</div>
+      <p>
+        Repeat per segment. The result is a concrete target population per segment — exactly
+        the kind of target that CRM and Activation can be held accountable for.
+      </p>
+
+      <h3>Step 3 — Build the supply equation</h3>
+      <p>
+        Mirror the same logic on the driver side:
+      </p>
+      <div class="code-block"><span class="c-comment"># How many active drivers do we need to serve 100k rides/day?</span>
+
+required_active_drivers = sum(
+    target_rides_per_day_in_segment_j / driver_contribution_rate_j
+    for segment_j in driver_segments
+)
+
+<span class="c-comment"># If 50% of supply comes from Power drivers contributing 12 rides/day:</span>
+power_supply_target = <span class="c-num">100_000</span> * <span class="c-num">0.50</span> = <span class="c-num">50_000</span> rides/day
+power_drivers_needed = <span class="c-num">50_000</span> / <span class="c-num">12</span> = ~<span class="c-num">4_167</span> active Power drivers</div>
+
+      <h3>Step 4 — Allocate to teams by segment</h3>
+      <p>
+        Each team owns the segments they can influence. This is where the framework stops
+        being just an equation and becomes an organisational tool:
+      </p>
+      <ul>
+        <li><strong>Paid Acquisition</strong> owns: <em>new user inflow into each segment</em> — from acquisition channels (Meta, Google, Adjust, Apple Search) at the entry-point behavioural class.</li>
+        <li><strong>Activation</strong> owns: <em>conversion of new users into active behavioural segments</em> — first ride within N days, second ride retention, lifecycle-stage progression.</li>
+        <li><strong>CRM</strong> owns: <em>reactivation of dormant users and retention of active segments</em> — keeping Heroes as Heroes, pulling At-Risk back into Active.</li>
+      </ul>
+      <p>
+        For each team, the framework produces a <strong>concrete weekly target per segment</strong>:
+        <em>"Acquire 12,000 new mid-tier passengers this week. Activate 4,800 of them to first-ride within 14 days. Retain 95% of the existing Hero base."</em>
+      </p>
+    </section>
+
+    <!-- Diagram -->
+    <section class="proj-section">
+      <h2>The flow</h2>
+      <div class="diagram-frame">
+        <svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arO" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L7,3 z" fill="#5C5C5A"/>
+            </marker>
+          </defs>
+          <text x="400" y="26" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="16" fill="#1A1A1A">Bottom-up KPI decomposition</text>
+
+          <!-- Top: Company KPI -->
+          <rect x="280" y="60" width="240" height="50" rx="4" fill="#FBE9DD" stroke="#B8410C"/>
+          <text x="400" y="82" text-anchor="middle" font-family="Manrope, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Company KPI · Rides / GMV / Revenue</text>
+          <text x="400" y="100" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C5C5A">target = 100k rides/day</text>
+
+          <line x1="400" y1="110" x2="400" y2="140" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+
+          <!-- Middle: Marketplace decomposition -->
+          <rect x="120" y="140" width="280" height="50" rx="4" fill="#DCEAE3" stroke="#265E50"/>
+          <text x="260" y="162" text-anchor="middle" font-family="Manrope, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Passenger segments × contribution</text>
+          <text x="260" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C5C5A">Hero · Frequent · Occasional · Rare</text>
+
+          <rect x="420" y="140" width="280" height="50" rx="4" fill="#DCEAE3" stroke="#265E50"/>
+          <text x="560" y="162" text-anchor="middle" font-family="Manrope, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Driver segments × contribution</text>
+          <text x="560" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C5C5A">Power · Regular · Casual</text>
+
+          <line x1="260" y1="190" x2="260" y2="220" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+          <line x1="560" y1="190" x2="560" y2="220" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+
+          <!-- Target population -->
+          <rect x="120" y="220" width="280" height="50" rx="4" fill="#DDE5EE" stroke="#1E3A5F"/>
+          <text x="260" y="242" text-anchor="middle" font-family="Manrope, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Active passenger target / segment</text>
+          <text x="260" y="260" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C5C5A">e.g. 300k Heroes, 250k Frequent...</text>
+
+          <rect x="420" y="220" width="280" height="50" rx="4" fill="#DDE5EE" stroke="#1E3A5F"/>
+          <text x="560" y="242" text-anchor="middle" font-family="Manrope, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Active driver target / segment</text>
+          <text x="560" y="260" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C5C5A">e.g. 4.2k Power, 7.5k Regular...</text>
+
+          <line x1="260" y1="270" x2="260" y2="300" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+          <line x1="560" y1="270" x2="560" y2="300" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+
+          <!-- Teams -->
+          <rect x="60" y="300" width="220" height="56" rx="4" fill="#EBDDE6" stroke="#6B2D5C"/>
+          <text x="170" y="324" text-anchor="middle" font-family="Manrope, sans-serif" font-size="12" font-weight="600" fill="#1A1A1A">Paid Acquisition</text>
+          <text x="170" y="342" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#5C5C5A">new user inflow / segment</text>
+
+          <rect x="290" y="300" width="220" height="56" rx="4" fill="#EBDDE6" stroke="#6B2D5C"/>
+          <text x="400" y="324" text-anchor="middle" font-family="Manrope, sans-serif" font-size="12" font-weight="600" fill="#1A1A1A">Activation</text>
+          <text x="400" y="342" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#5C5C5A">new → active conversion</text>
+
+          <rect x="520" y="300" width="220" height="56" rx="4" fill="#EBDDE6" stroke="#6B2D5C"/>
+          <text x="630" y="324" text-anchor="middle" font-family="Manrope, sans-serif" font-size="12" font-weight="600" fill="#1A1A1A">CRM</text>
+          <text x="630" y="342" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#5C5C5A">retention + reactivation</text>
+
+          <line x1="400" y1="356" x2="400" y2="386" stroke="#5C5C5A" stroke-width="1.5" marker-end="url(#arO)"/>
+
+          <!-- Budget constraint -->
+          <rect x="120" y="386" width="560" height="56" rx="4" fill="#EFE8DA" stroke="#6B5B2D"/>
+          <text x="400" y="410" text-anchor="middle" font-family="Manrope, sans-serif" font-size="12" font-weight="600" fill="#1A1A1A">Budget envelope · CAC ≤ LTV per segment</text>
+          <text x="400" y="428" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#5C5C5A">closes the loop: targets must be reachable within payback constraints</text>
+        </svg>
+        <div class="diagram-caption">Bottom-up flow — from segment behaviour to team OKRs</div>
+      </div>
+    </section>
+
+    <!-- Budget constraint -->
+    <section class="proj-section">
+      <h2>Closing the loop with CAC × LTV constraints</h2>
+      <p>
+        Segment targets alone aren't enough — they could be financially impossible. The
+        framework closes the loop by attaching a <strong>budget envelope</strong> to every
+        team and segment combination, governed by CAC and LTV (from the Bayesian CLV model):
+      </p>
+      <div class="code-block"><span class="c-comment"># For each team × segment, the financial guard rails:</span>
+
+new_users_acquired_in_segment * CAC_segment ≤ acquisition_budget_segment
+
+LTV_segment ≥ CAC_segment * payback_threshold
+
+<span class="c-comment"># Each team gets:</span>
+<span class="c-comment">#   - a volume target per segment (from the behavioural equation)</span>
+<span class="c-comment">#   - a max CAC per segment (from the LTV constraint)</span>
+<span class="c-comment">#   - a budget envelope (volume × max CAC)</span></div>
+      <p>
+        The CLV model feeds the LTV side; historical campaign data feeds the CAC side. The
+        framework refuses to recommend a segment-target combination that violates the payback
+        constraint — which prevents the classic Growth failure mode of "we hit our acquisition
+        target but blew the budget on segments that will never pay back."
+      </p>
+    </section>
+
+    <!-- Pipeline -->
+    <section class="proj-section">
+      <h2>Pipeline &amp; operationalisation</h2>
+      <ul>
+        <li><strong>Inputs.</strong> Segmentation pipeline (passenger and driver segments + behavioural contribution rates), CLV model (LTV per segment), historical campaign data (CAC per channel × segment), top-down company target.</li>
+        <li><strong>Engine.</strong> BigQuery + Dataform — bottom-up equation runs daily, refreshing target populations and budget envelopes per team × segment.</li>
+        <li><strong>Output.</strong> Looker dashboard the VP of Growth uses in weekly reviews: target attainment per team × segment, budget burn vs envelope, projected trajectory vs end-of-quarter target.</li>
+        <li><strong>Adaptive.</strong> Because contribution rates are measured (not assumed), the framework self-adjusts as behaviour shifts. If Hero passengers start riding more frequently in summer, the target population for Heroes auto-decreases for the same ride goal.</li>
+      </ul>
+
+      <div class="pull-quote">
+        The framework turned "we need more rides" into "Paid Acquisition needs 12,000 new mid-tier passengers, Activation needs to convert 4,800 to first-ride, CRM needs to keep our 280,000 active Heroes within their 0.10/day contribution — and here's the budget envelope for each."
+      </div>
+    </section>
+
+    <!-- Outcome -->
+    <section class="proj-section">
+      <h2>Outcome</h2>
+      <p>
+        Replaced top-down OKR setting with bottom-up behavioural decomposition. Teams now have
+        concrete, segment-level weekly targets that connect mechanically to the company KPIs —
+        and budget envelopes that prevent unprofitable growth.
+      </p>
+      <p>
+        Made it possible to <strong>detect drift early in the quarter</strong>: if Hero
+        retention is slipping, the framework surfaces it in the segment view before it shows
+        up in the top-line rides number. CRM can intervene while there's still time to
+        course-correct.
+      </p>
+      <p>
+        Adopted by the VP of Growth as the standard planning framework for quarterly OKR
+        setting and weekly Growth reviews.
+      </p>
+    </section>
+
+    <!-- Impact -->
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">3</div>
+          <div class="metric-tile-label">Company KPIs decomposed (rides / GMV / revenue)</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">3</div>
+          <div class="metric-tile-label">Teams aligned (Paid Acq · Activation · CRM)</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Daily</div>
+          <div class="metric-tile-label">Auto-refresh of segment targets</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">CAC ≤ LTV</div>
+          <div class="metric-tile-label">Budget guard rails per segment</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stack -->
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">BigQuery</span>
+        <span class="stack-pill">Dataform</span>
+        <span class="stack-pill">SQL</span>
+        <span class="stack-pill">Python</span>
+        <span class="stack-pill">LookML</span>
+        <span class="stack-pill">Looker</span>
+        <span class="stack-pill">Bayesian CLV (upstream)</span>
+        <span class="stack-pill">Behavioural Segmentation (upstream)</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="reactivation.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">A/B Testing Framework</div>
+      </a>
+      <a class="proj-nav-link next" href="medgames.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">Mediterranean Games — Network SOC</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

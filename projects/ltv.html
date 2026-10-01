@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayesian Passenger CLV Model — Abdelmalek Nouri</title>
+<meta name="description" content="Bayesian CLV model (MBG/NBD + Gamma-Gamma, pymc-marketing) for 1.8M passengers at Heetch — 24-month training, 3-month prediction horizon, weekly scoring, monthly retrain on GCP Vertex AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Bayesian Passenger CLV Model</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-ml">ML / Modelling</span>
+        <span class="project-tag project-tag-secondary">2026</span>
+        <span class="project-tag project-tag-secondary">Heetch</span>
+      </div>
+      <h1 class="project-h1">Bayesian Passenger <em>CLV</em> Model.</h1>
+      <p class="project-context">
+        Production Bayesian customer lifetime value model for 1.8 million Heetch passengers,
+        built on MBG/NBD + Gamma-Gamma using pymc-marketing. Trained on 24 months of
+        historical ride and payment data; predicts each passenger's expected revenue over the
+        next 3 months with full posterior uncertainty. Scoring runs weekly on GCP Vertex AI;
+        the model retrains every 4 weeks. Outputs flow directly into Braze for CRM activation.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Company</div>
+          <div class="meta-cell-value">Heetch</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Scale</div>
+          <div class="meta-cell-value">1.8M passengers</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Stakeholder</div>
+          <div class="meta-cell-value">VP of Growth</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Year</div>
+          <div class="meta-cell-value">2026</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        The Growth team was allocating acquisition spend across channels (Adjust, Meta, Google,
+        Apple Search) using <strong>short-window CAC and payback metrics</strong>. This
+        systematically underweighted channels that brought in users with longer payback
+        periods but higher lifetime value — exactly the kind of users you most want to
+        acquire. CRM, meanwhile, was targeting based on static RFM, with no probabilistic
+        view of future value.
+      </p>
+      <p>
+        Traditional LTV approaches fall in two traps. Either they're too simple — ARPU ×
+        retention curve — and miss the heterogeneity in how passengers actually behave. Or
+        they're too complex — deep learning on event sequences — and lose interpretability,
+        which matters when the VP needs to understand <em>why</em> a channel or segment is
+        being recommended.
+      </p>
+      <p>
+        I chose the <strong>Bayesian probabilistic approach</strong> deliberately: it gives
+        accurate per-passenger predictions <em>with calibrated uncertainty</em>, while keeping
+        each component interpretable. The output isn't just a number — it's a posterior
+        distribution, which means Growth can make decisions with full visibility into how
+        confident the model is on any given cohort.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Approach</h2>
+      <p>
+        I used <strong>MBG/NBD + Gamma-Gamma</strong>, implemented in
+        <code>pymc-marketing</code> — a probabilistic framework that decomposes CLV into a
+        frequency component and a monetary component, each fit by Bayesian inference rather
+        than maximum likelihood.
+      </p>
+
+      <h3>Frequency component — MBG/NBD</h3>
+      <p>
+        The Modified Beta-Geometric / Negative Binomial Distribution model predicts the
+        expected number of future rides per passenger, conditional on their full history. Two
+        latent processes:
+      </p>
+      <ul>
+        <li>A <strong>Poisson process</strong> governing how frequently an active passenger takes rides.</li>
+        <li>A <strong>Beta-distributed dropout probability</strong> — the chance that a passenger goes inactive after any given ride.</li>
+      </ul>
+      <p>
+        The "modified" variant (MBG/NBD vs the classical BG/NBD) handles passengers with zero
+        repeat purchases properly — a meaningful population in ride-hailing that the classical
+        model treats incorrectly.
+      </p>
+
+      <h3>Monetary component — Gamma-Gamma</h3>
+      <p>
+        Conditional on the frequency model, the Gamma-Gamma model predicts the average revenue
+        per ride for each passenger. It assumes monetary value per transaction follows a
+        Gamma distribution and that spending pattern is independent of frequency pattern — an
+        assumption I validated empirically on holdout data before deploying.
+      </p>
+
+      <h3>Bayesian inference via MCMC</h3>
+      <p>
+        Both models are fit using <strong>Markov Chain Monte Carlo</strong> in pymc-marketing,
+        which gives a full posterior over the model parameters rather than point estimates.
+        This is the key advantage: every CLV prediction comes with an uncertainty band, which
+        propagates into downstream segmentation and budgeting decisions.
+      </p>
+
+      <div class="code-block"><span class="c-comment"># MBG/NBD: fit frequency model with MCMC</span>
+mbg = MBGModel(data=df_passenger_summary)
+mbg.fit(
+    draws=<span class="c-num">2000</span>,
+    tune=<span class="c-num">1000</span>,
+    chains=<span class="c-num">4</span>,          <span class="c-comment"># 4 parallel chains for convergence diagnostics</span>
+    target_accept=<span class="c-num">0.95</span>
+)
+
+<span class="c-comment"># Posterior predictive: expected rides over next 3 months (T = 90 days)</span>
+expected_rides_3m = mbg.expected_purchases(
+    customer_id=df.customer_id,
+    future_t=<span class="c-num">90</span>,
+    return_mean=<span class="c-key">False</span>   <span class="c-comment"># return full posterior samples</span>
+)
+
+<span class="c-comment"># Gamma-Gamma: fit monetary model, combine for CLV</span>
+gg = GammaGammaModel(data=df_passenger_summary)
+gg.fit(draws=<span class="c-num">2000</span>, tune=<span class="c-num">1000</span>, chains=<span class="c-num">4</span>)
+
+clv_3m_posterior = expected_rides_3m * gg.expected_customer_spend(...)</div>
+
+      <h3>Convergence diagnostics</h3>
+      <p>
+        Ran <strong>4 parallel MCMC chains</strong> and validated convergence via standard
+        Bayesian diagnostics — <code>R-hat &lt; 1.01</code>, effective sample size &gt; 1000
+        per parameter, no divergent transitions. These checks run automatically on every
+        retrain and <strong>block deployment if they fail</strong>. This is the difference
+        between "we fit a Bayesian model" and "we deploy a Bayesian model that's actually
+        trustworthy."
+      </p>
+
+      <h3>Probability calibration</h3>
+      <p>
+        For the binary "will purchase in next 3 months" signal derived from the frequency
+        model, I applied <strong>isotonic calibration</strong> on a holdout fold to ensure
+        predicted probabilities match observed empirical rates. Calibration matters when
+        downstream consumers (CRM, budget allocation) make threshold decisions on the score.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Training data &amp; features</h2>
+      <p>
+        Trained on <strong>24 months of historical passenger data</strong> — full ride
+        history, payment records, lifecycle transitions, and behavioural signals. The 24-month
+        window was chosen to capture full seasonality cycles while avoiding stale behaviour
+        from passengers who behave very differently today than two years ago.
+      </p>
+      <p>
+        Beyond the core RFM signals (recency, frequency, monetary value), I engineered
+        features that capture meaningful passenger behaviour patterns:
+      </p>
+      <ul>
+        <li><strong>Payment method mix</strong> — card vs cash distribution, a strong signal in markets where one payment type dominates.</li>
+        <li><strong>Ride radius</strong> — median and variance of pickup/destination geographies, capturing commuter-heavy vs social-heavy patterns.</li>
+        <li><strong>Time-of-day distribution</strong> — morning / evening / weekend skew.</li>
+        <li><strong>Lifecycle stage</strong> from the behavioural segmentation pipeline.</li>
+        <li><strong>Cancellation behaviour</strong> — cancel rate and recency, a leading indicator for disengagement that pure frequency models miss.</li>
+      </ul>
+    </section>
+
+    <section class="proj-section">
+      <h2>Production pipeline</h2>
+
+      <h3>Weekly scoring · monthly retrain</h3>
+      <p>The pipeline runs on a two-tier cadence:</p>
+      <ul>
+        <li><strong>Weekly scoring.</strong> Every week, the latest model scores all 1.8M passengers and materialises CLV + uncertainty + decile + lifecycle stage to a BigQuery table.</li>
+        <li><strong>Monthly retrain.</strong> Every 4 weeks, the full pipeline retrains on the most recent 24 months. Convergence diagnostics gate deployment — if R-hat or ESS thresholds fail, the previous model continues scoring until the next retrain succeeds.</li>
+      </ul>
+      <p>
+        Decoupling scoring (cheap, weekly) from retraining (expensive, monthly) was deliberate.
+        It gives CRM fresh scores every week without burning compute on unnecessary refits,
+        and keeps model parameters stable enough that downstream segment definitions don't
+        drift week-to-week.
+      </p>
+
+      <h3>Orchestration on GCP Vertex AI</h3>
+      <ul>
+        <li>Training job runs on Vertex AI Workbench with managed pymc / JAX backend for MCMC acceleration.</li>
+        <li>Scoring job materialises predictions to BigQuery, partitioned by scoring date.</li>
+        <li>Looker dashboard reads from the materialised table — channel × cohort × CLV breakdown with confidence intervals, used by the VP of Growth for budget reviews.</li>
+        <li>Braze sync runs after each scoring run, pushing fresh CLV deciles and lifecycle stages to CRM-ready audience segments for same-day activation.</li>
+      </ul>
+
+      <div class="pull-quote">
+        Top decile captured 57% of total holdout revenue — meaning CRM and retention spend can be concentrated on the 10% of passengers who actually drive over half the business.
+      </div>
+    </section>
+
+    <section class="proj-section">
+      <h2>Outcome</h2>
+      <p>
+        Replaced single-window CAC analysis with a forward-looking, uncertainty-aware CLV view.
+        Surfaced acquisition channels with high CAC but excellent CLV that had been underfunded
+        under the old framework, and identified passenger segments where retention spend was
+        being wasted on users with structurally low future value.
+      </p>
+      <p>
+        The model is now part of the standard Growth toolkit — feeding the OKR framework, CRM
+        targeting, and acquisition budget allocation decisions.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">1.8M</div>
+          <div class="metric-tile-label">Passengers scored per run</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">0.75</div>
+          <div class="metric-tile-label">Holdout AUROC</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">57%</div>
+          <div class="metric-tile-label">Holdout revenue in top decile</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Weekly</div>
+          <div class="metric-tile-label">Production scoring cadence</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">24 mo</div>
+          <div class="metric-tile-label">Training window</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">3 mo</div>
+          <div class="metric-tile-label">Prediction horizon</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">4 chains</div>
+          <div class="metric-tile-label">Parallel MCMC for convergence</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Every 4 wk</div>
+          <div class="metric-tile-label">Retrain cadence</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">Python</span>
+        <span class="stack-pill">pymc-marketing</span>
+        <span class="stack-pill">PyMC</span>
+        <span class="stack-pill">JAX</span>
+        <span class="stack-pill">pandas</span>
+        <span class="stack-pill">scikit-learn</span>
+        <span class="stack-pill">BigQuery</span>
+        <span class="stack-pill">Dataform</span>
+        <span class="stack-pill">Vertex AI</span>
+        <span class="stack-pill">Looker</span>
+        <span class="stack-pill">Braze</span>
+        <span class="stack-pill">MLOps</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="derm.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">Dermoscopic Lesion Segmentation</div>
+      </a>
+      <a class="proj-nav-link next" href="driver-value.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">Driver Value Segmentation</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

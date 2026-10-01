@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driver Value Segmentation — 3-Level Bayesian Model — Abdelmalek Nouri</title>
+<meta name="description" content="Supply-side driver segmentation at Heetch: a 3-level Bayesian model (MBG/NBD + Gamma-Gamma, pymc-marketing) predicting whether a driver is still active, how often they will work, and what an active day is worth — turned into a retention priority matrix for ~49K drivers in Algeria.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  .data-table-wrap { overflow-x: auto; margin: 24px 0 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-elev); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .data-table th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); background: var(--bg-card); }
+  .data-table td.num { font-family: var(--mono); font-size: 13px; text-align: right; }
+  .data-table th.num { text-align: right; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Driver Value Segmentation</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-ml">ML / Modelling</span>
+        <span class="project-tag project-tag-secondary">2026</span>
+        <span class="project-tag project-tag-secondary">Heetch</span>
+      </div>
+      <h1 class="project-h1">Driver Value <em>Segmentation</em> — a 3-level Bayesian model.</h1>
+      <p class="project-context">
+        The supply-side counterpart to the passenger CLV model. For every independent driver
+        in Algeria, a Bayesian MBG/NBD + Gamma-Gamma system (pymc-marketing) answers three
+        separate questions — <em>is this driver still active, how often will they work, and
+        what is an active day worth</em> — over a 60-day horizon. The three levels are cut into
+        data-driven bands and combined into a retention priority matrix that tells Supply Ops
+        and CRM exactly which drivers to protect, rescue, or win back.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Company</div>
+          <div class="meta-cell-value">Heetch</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Scale</div>
+          <div class="meta-cell-value">~49K drivers scored</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Market</div>
+          <div class="meta-cell-value">Algeria (DZ)</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Year</div>
+          <div class="meta-cell-value">2026</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        On the demand side, a passenger's value is fairly clean to measure: rides × spend.
+        On the supply side it isn't. A driver only completes the trips the matching engine
+        hands them, so modelling churn on <strong>completed trips</strong> conflates
+        <em>"they stopped showing up"</em> with <em>"they stopped getting matched"</em> — a
+        funnel-ownership confound that would have the model blaming drivers for marketplace
+        conditions.
+      </p>
+      <p>
+        Supply Ops also needed more than one number. A single "driver LTV" score hides the
+        decision that actually matters: a high-value driver drifting away needs a very
+        different intervention from a low-value driver who is perfectly stable. The goal was
+        a model whose levels could be read <strong>independently</strong> — and then combined
+        into an operational priority list.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Three levels, one composite</h2>
+
+      <div class="diagram-frame">
+        <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="Manrope, sans-serif">
+          <g font-size="11" font-family="JetBrains Mono, monospace" fill="#8B8B86" letter-spacing="1">
+            <text x="40" y="28">LEVEL 1</text>
+            <text x="290" y="28">LEVEL 2</text>
+            <text x="540" y="28">LEVEL 3</text>
+          </g>
+          <g>
+            <rect x="40" y="40" width="180" height="96" rx="10" fill="#DCEAE3" stroke="#265E50"/>
+            <text x="130" y="70" text-anchor="middle" font-size="15" font-weight="600" fill="#265E50">Still active?</text>
+            <text x="130" y="94" text-anchor="middle" font-size="12" fill="#1A1A1A">MBG/NBD P(alive)</text>
+            <text x="130" y="114" text-anchor="middle" font-size="12" fill="#5C5C5A">+ isotonic calibration</text>
+
+            <rect x="290" y="40" width="180" height="96" rx="10" fill="#DDE5EE" stroke="#1E3A5F"/>
+            <text x="380" y="70" text-anchor="middle" font-size="15" font-weight="600" fill="#1E3A5F">How often?</text>
+            <text x="380" y="94" text-anchor="middle" font-size="12" fill="#1A1A1A">MBG/NBD rate λ</text>
+            <text x="380" y="114" text-anchor="middle" font-size="12" fill="#5C5C5A">active days in 60d</text>
+
+            <rect x="540" y="40" width="180" height="96" rx="10" fill="#EBDDE6" stroke="#6B2D5C"/>
+            <text x="630" y="70" text-anchor="middle" font-size="15" font-weight="600" fill="#6B2D5C">Worth per day?</text>
+            <text x="630" y="94" text-anchor="middle" font-size="12" fill="#1A1A1A">Gamma-Gamma</text>
+            <text x="630" y="114" text-anchor="middle" font-size="12" fill="#5C5C5A">EUR per active day</text>
+          </g>
+          <g font-size="11" font-family="JetBrains Mono, monospace" fill="#5C5C5A" text-anchor="middle">
+            <text x="130" y="166">1D decision tree</text>
+            <text x="130" y="182">→ churn bands</text>
+            <text x="380" y="166">1D k-means</text>
+            <text x="380" y="182">→ cadence bands</text>
+            <text x="630" y="166">Lorenz-curve knees</text>
+            <text x="630" y="182">→ value tiers</text>
+          </g>
+          <g stroke="#C9C4B4" stroke-width="1.5" fill="none">
+            <path d="M130 194 V214 H380 V230"/>
+            <path d="M380 194 V230"/>
+            <path d="M630 194 V214 H380"/>
+          </g>
+          <rect x="230" y="232" width="300" height="52" rx="10" fill="#FBE9DD" stroke="#B8410C"/>
+          <text x="380" y="256" text-anchor="middle" font-size="15" font-weight="600" fill="#B8410C">Retention priority matrix</text>
+          <text x="380" y="274" text-anchor="middle" font-size="12" fill="#5C5C5A">churn risk × capacity value, recency-gated</text>
+        </svg>
+        <div class="diagram-caption">Each level is modelled, validated, and banded separately before being combined.</div>
+      </div>
+    </section>
+
+    <section class="proj-section">
+      <h2>Design decisions, made explicitly</h2>
+
+      <h3>1 · The transaction is an active day — not a trip, not a shift</h3>
+      <p>
+        BG/NBD-family models assume a customer transacts at some rate λ until they silently
+        churn. Picking the driver-side analogue of a "transaction" decides what the model
+        actually measures:
+      </p>
+      <ul>
+        <li><strong>Completed trips</strong> are system-mediated — they measure matching, not driver intent.</li>
+        <li><strong>Raw shift starts</strong> are driver-owned but contained a confirmed toggle artifact (drivers logging 300+ shifts in 90 days), which would corrupt a Poisson count.</li>
+        <li><strong>Active calendar days</strong> are driver-owned and immune to the toggle artifact. Collapsing to the day level also removes intra-day burstiness and keeps the Poisson assumption honest.</li>
+      </ul>
+
+      <h3>2 · Value is capacity, not a churn-weighted expectation</h3>
+      <p>
+        Expected active days already integrate P(alive). Multiplying them by P(alive) again to
+        get "value" would double-count churn and make the churn and value axes of the priority
+        matrix collapse onto each other. Instead, value is a <strong>capacity</strong> measure —
+        the driver's work rhythm × EUR earnings per active day, <em>if they stay</em>. The
+        result: <code>corr(capacity value, P(alive)) = +0.08</code>, so the two axes are
+        genuinely independent and the matrix has no empty cells.
+      </p>
+
+      <h3>3 · A 2-month test window to stabilise labels</h3>
+      <p>
+        A part-time driver who works twice a month produces an extremely noisy "active / not
+        active" label in a 1-month window. The holdout window — and the prediction horizon —
+        are locked at <strong>60 days</strong>, with an assertion in the pipeline that keeps
+        both in lockstep. Holdout metrics are then stratified by frequency band so performance
+        on the casual tail stays visible instead of being averaged away.
+      </p>
+
+      <h3>4 · Leakage-proof temporal design</h3>
+      <p>
+        Training covers January–June 2026, the holdout July–August. Evaluation features are
+        frozen at the start of the test window, and each driver's market is attributed
+        <strong>once</strong> from a trailing 12-month window and reused for every dataset —
+        so a driver can never be counted in one country during training and another during
+        evaluation.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Modelling &amp; validation</h2>
+
+      <h3>Hard gates before MCMC</h3>
+      <p>
+        A validation stage enforces the mathematical preconditions of pymc-marketing models —
+        no negative frequencies, recency ≤ T, no nulls, strictly positive monetary value — and
+        fails loudly before any expensive sampling starts.
+      </p>
+
+      <h3>Bayesian fit with convergence gates</h3>
+      <p>
+        The <strong>Modified BG/NBD</strong> was chosen over classic BG/NBD because
+        single-active-day drivers are a large cohort, and the classic model cannot let them
+        churn immediately — it would badly overstate their retention. Both MBG/NBD and
+        Gamma-Gamma are fit by MCMC and gated on <code>R-hat &lt; 1.01</code>,
+        <code>ESS &gt; 400</code>, and zero divergences. The Gamma-Gamma frequency/value
+        independence assumption is checked via correlation before the fit is trusted.
+      </p>
+
+      <div class="code-block"><span class="c-comment"># Level 1 &amp; 2 — churn and habit on active days</span>
+mbg = ModifiedBetaGeoModel()
+mbg.fit(data=df_rfm_fit, draws=MCMC_DRAWS, tune=MCMC_TUNE,
+        chains=MCMC_CHAINS, target_accept=MCMC_TARGET_ACCEPT)
+
+<span class="c-comment"># Level 1 — calibrate raw P(alive) against observed holdout activity</span>
+calibrator = IsotonicRegression(out_of_bounds=<span class="c-str">"clip"</span>)
+calibrator.fit(df_calib[<span class="c-str">"p_alive_raw"</span>], df_calib[<span class="c-str">"active_val"</span>])
+
+<span class="c-comment"># Composite</span>
+expected_scarce_value_h = p_alive_cal * expected_active_days_h * expected_value_per_active_day</div>
+
+      <h3>Data-driven segment boundaries</h3>
+      <p>No hand-picked thresholds anywhere — each level's bands are learned from data:</p>
+      <ul>
+        <li><strong>Churn bands</strong> — a 3-leaf 1D decision tree on calibrated P(alive) against observed holdout churn found cuts at 0.48 and 0.75 (<em>likely churned · at risk · active</em>).</li>
+        <li><strong>Cadence bands</strong> — 1D k-means on expected active days, converted into "days between active days": <em>daily</em> (≤ 2.4), <em>frequent</em> (≤ 4.9), <em>regular</em> (≤ 14.9), <em>occasional</em>, plus <em>effectively inactive</em>.</li>
+        <li><strong>Value tiers</strong> — knee-point detection on the Lorenz curve: the top <strong>28.4%</strong> of drivers hold <strong>78.6%</strong> of capacity value (<em>critical</em>), the top 57.2% hold 95.4% (<em>important</em>).</li>
+      </ul>
+    </section>
+
+    <section class="proj-section">
+      <h2>The retention priority matrix</h2>
+      <p>
+        Churn band × value tier, with a recency gate (win-back only within 30 days of last
+        activity), produces six operational buckets — each with a clear owner and playbook:
+      </p>
+
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th class="num">Drivers</th>
+              <th class="num">P(alive)</th>
+              <th class="num">Last seen</th>
+              <th class="num">Days / 60d</th>
+              <th class="num">% of value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>1 · Urgent</strong></td><td class="num">4.9%</td><td class="num">0.60</td><td class="num">11d</td><td class="num">15.3</td><td class="num">6.6%</td></tr>
+            <tr><td><strong>2 · Protect</strong></td><td class="num">10.5%</td><td class="num">0.92</td><td class="num">2d</td><td class="num">18.3</td><td class="num">20.7%</td></tr>
+            <tr><td><strong>3 · Win back</strong></td><td class="num">5.5%</td><td class="num">0.29</td><td class="num">21d</td><td class="num">21.3</td><td class="num">11.3%</td></tr>
+            <tr><td><strong>4 · Monitor</strong></td><td class="num">6.6%</td><td class="num">0.60</td><td class="num">23d</td><td class="num">2.4</td><td class="num">0.8%</td></tr>
+            <tr><td><strong>5 · Reactivation pool</strong></td><td class="num">36.2%</td><td class="num">0.18</td><td class="num">106d</td><td class="num">20.7</td><td class="num">56.7%</td></tr>
+            <tr><td><strong>6 · Maintain</strong></td><td class="num">36.2%</td><td class="num">0.27</td><td class="num">108d</td><td class="num">2.2</td><td class="num">3.8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size: 14px; color: var(--text-3);">"Days / 60d" is capacity — how often the driver works when active. Medians for "last seen".</p>
+
+      <div class="pull-quote">
+        15% of drivers — Urgent and Protect — hold over a quarter of total capacity value — and are now identifiable by name every cycle.
+      </div>
+
+      <p>
+        The most actionable finding was the <strong>reactivation pool</strong>: drivers dormant
+        for ~3.5 months who, when they did work, worked nearly every third day. They hold the
+        majority of latent capacity value — a supply lever that pure churn scoring would have
+        written off as "lost".
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Holdout results — and honest caveats</h2>
+      <ul>
+        <li><strong>Level 1 — churn.</strong> Holdout AUROC <strong>0.78</strong>, Brier skill score 0.27 over a 46.9% base rate. Excellent on core drivers (0.84 AUROC at 16+ active days), weaker on the casual tail (0.65 for single-day drivers) — those predictions are flagged <code>confidence = low</code> so they don't drive premium retention spend alone.</li>
+        <li><strong>Level 2 — habit.</strong> Aggregate active days within <strong>+5.0%</strong> of actual (184K predicted vs 175K observed), MAE 3.35 days per driver — reliable for city-level supply planning. Slight under-prediction of full dormancy, and a small "resurrection" uptick in the bottom deciles that argues for a dedicated win-back trigger.</li>
+        <li><strong>Level 3 — value.</strong> Aggregate holdout value error <strong>−7.0%</strong> (€1.16M predicted vs €1.25M actual), MAE €2.11 per active day. Drivers outside the Gamma-Gamma domain (no repeat days) get the population mean and are flagged <code>value_is_imputed</code>.</li>
+      </ul>
+    </section>
+
+    <section class="proj-section">
+      <h2>Production</h2>
+      <p>
+        The pipeline is parameterised by market (Algeria and France configs), runs on GCP,
+        and stores fitted models, the calibrator, and run metadata as versioned artifacts in
+        Cloud Storage. Scores are written to BigQuery <strong>idempotently</strong> — re-running
+        a reference date replaces that month's rows instead of duplicating them — while full
+        history is kept so later cycles can check whether predicted segments actually behaved
+        as forecast. Each row carries model version, holdout AUROC, and a confidence flag for
+        downstream CRM guards.
+      </p>
+    </section>
+
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">49K</div>
+          <div class="metric-tile-label">Drivers scored per cycle</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">0.78</div>
+          <div class="metric-tile-label">Holdout AUROC (P(alive))</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">+5.0%</div>
+          <div class="metric-tile-label">Aggregate active-day error</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">−7.0%</div>
+          <div class="metric-tile-label">Aggregate value error</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">3 levels</div>
+          <div class="metric-tile-label">Churn · cadence · value</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">6</div>
+          <div class="metric-tile-label">Operational priority tiers</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">28%</div>
+          <div class="metric-tile-label">Drivers holding 79% of value</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">60 d</div>
+          <div class="metric-tile-label">Prediction horizon</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">Python</span>
+        <span class="stack-pill">pymc-marketing</span>
+        <span class="stack-pill">PyMC</span>
+        <span class="stack-pill">ArviZ</span>
+        <span class="stack-pill">scikit-learn</span>
+        <span class="stack-pill">pandas</span>
+        <span class="stack-pill">BigQuery</span>
+        <span class="stack-pill">Cloud Storage</span>
+        <span class="stack-pill">GCP</span>
+        <span class="stack-pill">MLOps</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="ltv.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">Bayesian Passenger CLV Model</div>
+      </a>
+      <a class="proj-nav-link next" href="reactivation.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">A/B Testing Framework</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

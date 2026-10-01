@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dermoscopic Lesion Segmentation — Abdelmalek Nouri</title>
+<meta name="description" content="Deep learning U-Net architecture for pixel-level dermoscopic skin-lesion segmentation. Master's thesis, ranked 1st in cohort.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Dermoscopic Lesion Segmentation</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-ml">ML / Modelling</span>
+        <span class="project-tag project-tag-secondary">2022</span>
+        <span class="project-tag project-tag-secondary">Master's Thesis</span>
+      </div>
+      <h1 class="project-h1">Dermoscopic <em>Lesion Segmentation</em>.</h1>
+      <p class="project-context">
+        Deep learning approach to dermoscopic skin-lesion segmentation using a U-Net
+        convolutional architecture. Master's thesis ranked 1st in cohort. Demonstrates depth
+        in deep learning, image segmentation, and PyTorch.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Context</div>
+          <div class="meta-cell-value">Master's Thesis</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Institution</div>
+          <div class="meta-cell-value">Univ. of Bouira</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Result</div>
+          <div class="meta-cell-value">Ranked 1st in cohort</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Year</div>
+          <div class="meta-cell-value">2022</div>
+        </div>
+      </div>
+
+      <p style="margin-top: 32px; font-size: 14px; color: var(--text-3); font-family: var(--mono);">
+        Thesis archive:
+        <a href="http://dspace.univ-bouira.dz:8080/jspui/bitstream/123456789/14335/1/Memoire-M2_%20Version_finale.pdf" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">University of Bouira DSpace — Memoire M2 (PDF)</a>
+      </p>
+    </div>
+
+    <!-- Problem -->
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        Dermoscopic skin-lesion segmentation is a foundational problem in computer-aided
+        dermatology: accurately delineating lesion boundaries from healthy skin in
+        dermoscopic images, as a precursor to automated malignancy classification.
+      </p>
+      <p>
+        The challenge is the combination of <strong>high inter-class variability</strong>
+        (lesions vary enormously in colour, texture, shape, and size) with
+        <strong>low contrast at boundaries</strong> (the transition from lesion to skin is
+        often gradual rather than sharp). Classical computer vision techniques struggle here
+        — the boundary detection problem is not analytically solvable, and the variation
+        across the dataset means hand-engineered features generalize poorly.
+      </p>
+      <p>
+        The thesis question: can a deep learning model produce accurate pixel-level
+        segmentation masks across the full range of clinical variation in standard
+        dermoscopic datasets?
+      </p>
+    </section>
+
+    <!-- Approach -->
+    <section class="proj-section">
+      <h2>Approach</h2>
+
+      <h3>Architecture: U-Net</h3>
+      <p>
+        I used a CNN-based <strong>encoder–decoder architecture with skip connections</strong>
+        from the U-Net family. The reasoning:
+      </p>
+      <ul>
+        <li>The <strong>encoder</strong> compresses spatial information while building up semantic features (what is this region?).</li>
+        <li>The <strong>decoder</strong> upsamples back to the original resolution while reconstructing spatial detail (where exactly is the boundary?).</li>
+        <li><strong>Skip connections</strong> from encoder to decoder pass spatial detail directly across, letting the model use both the high-level semantic context and the fine-grained pixel detail simultaneously.</li>
+      </ul>
+      <p>
+        For boundary-sensitive tasks like lesion segmentation, U-Net is the natural choice
+        because it preserves spatial precision in a way that pure encoder-decoder networks
+        cannot.
+      </p>
+
+      <h3>Dataset and augmentation</h3>
+      <p>
+        Trained on the <strong>ISIC dataset</strong> — the standard benchmark for skin-lesion
+        analysis. Applied extensive data augmentation to handle the high natural variation in
+        lesion appearance:
+      </p>
+      <ul>
+        <li>Random rotations and flips (lesions have no canonical orientation).</li>
+        <li>Colour jitter (handle variation in lighting and skin tone).</li>
+        <li>Elastic deformations (simulate the natural variation in lesion shape).</li>
+        <li>Random crops and rescaling (handle variation in capture distance).</li>
+      </ul>
+      <p>
+        Augmentation effectively multiplied the training set size and meaningfully improved
+        generalization to unseen lesion types.
+      </p>
+
+      <h3>Loss function</h3>
+      <p>
+        Combined two losses:
+      </p>
+      <ul>
+        <li><strong>Dice loss</strong> for spatial accuracy — directly optimizes the metric we care about (overlap between predicted and true mask). Robust to class imbalance.</li>
+        <li><strong>Binary cross-entropy</strong> for pixel-level confidence — provides smoother gradients early in training.</li>
+      </ul>
+      <p>
+        The combination gave more stable training than either alone — Dice handles the
+        imbalance between lesion and skin pixels, BCE keeps gradients flowing through the
+        early epochs before the Dice signal becomes informative.
+      </p>
+    </section>
+
+    <!-- Evaluation -->
+    <section class="proj-section">
+      <h2>Evaluation</h2>
+      <p>Standard segmentation metrics on a held-out validation split:</p>
+      <ul>
+        <li><strong>Dice coefficient</strong> — overlap measure (harmonic mean of precision and recall on pixels).</li>
+        <li><strong>Jaccard index (IoU)</strong> — intersection over union, the strict version.</li>
+        <li><strong>Sensitivity</strong> — proportion of lesion pixels correctly identified.</li>
+        <li><strong>Specificity</strong> — proportion of skin pixels correctly classified.</li>
+      </ul>
+      <p>
+        Compared against published baselines from the ISIC challenge. The model reached
+        competitive performance for the architecture class, with the augmentation and combined
+        loss strategy contributing meaningfully to the final scores.
+      </p>
+    </section>
+
+    <!-- Outcome -->
+    <section class="proj-section">
+      <h2>Outcome</h2>
+      <p>
+        Thesis ranked <strong>1st in cohort</strong>. Demonstrated end-to-end deep learning
+        capability — from data preparation through architecture choice, training strategy,
+        evaluation, and academic writing.
+      </p>
+
+      <div class="pull-quote">
+        Even when the day-to-day work is tabular ML and pipelines, the deep learning foundation matters — it's what gives you the vocabulary to evaluate when DL is the right tool and when it's overkill.
+      </div>
+
+      <p>
+        While my professional work since has focused on tabular ML and analytics engineering,
+        the deep learning foundation from this thesis stays relevant: it shapes how I evaluate
+        when DL is the right tool versus when simpler models will do, and it gives me the
+        background to engage credibly with computer vision and deep learning teams when those
+        problems come up at work.
+      </p>
+    </section>
+
+    <!-- Impact -->
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">1st</div>
+          <div class="metric-tile-label">Cohort ranking</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">U-Net</div>
+          <div class="metric-tile-label">Architecture</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">ISIC</div>
+          <div class="metric-tile-label">Benchmark dataset</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stack -->
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">Python</span>
+        <span class="stack-pill">PyTorch</span>
+        <span class="stack-pill">NumPy</span>
+        <span class="stack-pill">OpenCV</span>
+        <span class="stack-pill">CNN</span>
+        <span class="stack-pill">U-Net</span>
+        <span class="stack-pill">Deep Learning</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="churn.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">Customer Churn Prediction</div>
+      </a>
+      <a class="proj-nav-link next" href="ltv.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">Passenger LTV Prediction</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

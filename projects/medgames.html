@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mediterranean Games — Network SOC — Abdelmalek Nouri</title>
+<meta name="description" content="Real-time network quality monitoring for Mobilis (ATM Mobilis), official technology partner of the Oran 2022 Mediterranean Games. BTS-level voice (CS) and data (PS) performance dashboards covering 3G/4G nodes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Mediterranean Games — Network SOC</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-analytics">Analytics</span>
+        <span class="project-tag project-tag-secondary">2022</span>
+        <span class="project-tag project-tag-secondary">ATM Mobilis</span>
+      </div>
+      <h1 class="project-h1">Mediterranean Games — <em>Network SOC</em>.</h1>
+      <p class="project-context">
+        Real-time network quality monitoring for <strong>Mobilis (ATM Mobilis)</strong>, the
+        official technology partner of the Oran 2022 Mediterranean Games. Built BTS-level
+        dashboards tracking voice (CS) and data (PS) performance across 3G and 4G nodes in
+        the event geography, enabling the operator's Service Operations Center to detect and
+        remediate network degradation while the live event was still in progress.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Client</div>
+          <div class="meta-cell-value">ATM Mobilis</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Vendor</div>
+          <div class="meta-cell-value">Huawei (SmartCare)</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Role</div>
+          <div class="meta-cell-value">Lead Analytics Engineer</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Event</div>
+          <div class="meta-cell-value">Oran 2022 · 11 days</div>
+        </div>
+      </div>
+
+      <p style="margin-top: 32px; font-size: 14px; color: var(--text-3); font-family: var(--mono);">
+        Press coverage:
+        <a href="https://www.lesoirdalgerie.com/supplement-tic/mobilis-inaugure-un-centre-technique-pour-surveiller-la-qualite-de-son-reseau-83682" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">Le Soir d'Algérie — Mobilis inaugure un centre technique pour surveiller la qualité de son réseau</a>
+      </p>
+    </div>
+
+    <!-- The problem -->
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        The Mediterranean Games are a major sporting event — 11 days of competition drawing
+        athletes, officials, broadcasters, and spectators from across the Mediterranean basin.
+        As the <strong>official technology partner</strong>, Mobilis carried both the network
+        load and the brand stakes: any visible degradation at a venue or in a broadcast feed
+        would land on the front page of national press.
+      </p>
+      <p>
+        Standard Customer Experience Management dashboards refresh on hourly or daily windows.
+        Adequate for normal operations but completely insufficient for live event monitoring,
+        where a Voice or Data degradation needs detection in <em>minutes</em>, not hours. By
+        the time a daily KPI dashboard surfaces a problem, the broadcast slot is already over
+        — and the operator's brand has already taken the hit.
+      </p>
+      <p>
+        The brief was: stand up a dedicated Service Operations Center (SOC) for the duration
+        of the event, with <strong>BTS-level visibility into Voice (CS) and Data (PS)
+        performance</strong>, refreshed fast enough that the NOC team could act on a problem
+        before it became visible to users.
+      </p>
+    </section>
+
+    <!-- Approach -->
+    <section class="proj-section">
+      <h2>Approach</h2>
+
+      <h3>Network architecture scope</h3>
+      <p>
+        The monitoring layer covered the full radio access network for the event geography —
+        from the radio side down to the core:
+      </p>
+      <ul>
+        <li><strong>BTS / Node B (3G)</strong> — voice and data carried over UMTS in older coverage zones.</li>
+        <li><strong>eNodeB (4G/LTE)</strong> — primary data carrier and increasingly the voice carrier via VoLTE.</li>
+        <li><strong>Core Network</strong> — CS (Circuit-Switched) for legacy voice signalling; PS (Packet-Switched) for data and modern voice.</li>
+      </ul>
+      <p>
+        The dashboards needed to surface anomalies at the <strong>BTS / eNodeB level</strong> —
+        the most granular unit where the NOC team can actually take action (cell reboot, load
+        rebalancing, neighbour-list reconfiguration, escalation to radio engineering).
+      </p>
+
+      <h3>KPIs that matter for a live event</h3>
+      <p>Voice (CS) side:</p>
+      <ul>
+        <li><strong>Drop Call Rate</strong> per cell — single best indicator of voice service quality.</li>
+        <li><strong>Call Setup Success Rate</strong> — measures whether calls connect at all.</li>
+        <li><strong>Paging Success Rate</strong> — proxy for network reachability.</li>
+        <li><strong>Handover Success Rate</strong> — critical at venue boundaries with high user mobility.</li>
+        <li><strong>Voice Quality (MOS)</strong> — perceived voice quality scoring.</li>
+      </ul>
+      <p>Data (PS) side:</p>
+      <ul>
+        <li><strong>Throughput</strong> uplink and downlink per cell — the metric broadcasters care about.</li>
+        <li><strong>Latency</strong> — RTT and one-way delay.</li>
+        <li><strong>Data Session Establishment Success Rate</strong> — can users actually attach and use data?</li>
+        <li><strong>Cell-level user volume</strong> and PRB utilisation — capacity headroom.</li>
+        <li><strong>OTT performance</strong> — proxy KPIs for streaming apps used by spectators and broadcast crews.</li>
+      </ul>
+
+      <h3>Data pipeline</h3>
+      <p>
+        Built on top of the existing Huawei SmartCare platform, but with the refresh windows
+        and aggregation layer adapted for live monitoring:
+      </p>
+      <ul>
+        <li>Raw trace data ingested from <strong>PS Probes and CS Probes</strong> at the Core Network.</li>
+        <li>Cell-level performance counters pulled from the radio OSS.</li>
+        <li>Ingestion via the Hadoop ecosystem (Spark, Hive); refresh window compressed from hourly to <strong>minute-level granularity</strong> for the event window.</li>
+        <li>Aggregations partitioned by venue geography — event sites, athlete villages, broadcast centres, transport corridors.</li>
+      </ul>
+
+      <h3>SOC dashboards designed for action</h3>
+      <p>
+        I designed the dashboards specifically for the NOC engineers who actually fix
+        problems — not for executive observation. Each metric had a clear next action:
+      </p>
+      <ul>
+        <li><strong>Threshold-based alerts</strong> tuned per KPI based on the cell's baseline performance.</li>
+        <li><strong>Geographic overlays</strong> showing affected cells on a venue map.</li>
+        <li><strong>Drill-down from venue → cell → KPI history</strong> for fast root-cause investigation.</li>
+        <li><strong>Severity prioritisation</strong> by user volume and geographic concentration — a degraded cell at a venue mid-event outranks a degraded cell in an empty parking lot.</li>
+      </ul>
+      <p>
+        The distinction matters: a dashboard built for observation gets watched, then ignored
+        when the pressure spikes. A dashboard built for action gets used.
+      </p>
+    </section>
+
+    <!-- Outcome -->
+    <section class="proj-section">
+      <h2>Outcome</h2>
+      <p>
+        Mobilis launched the dedicated SOC for the duration of the event (covered in
+        <a href="https://www.lesoirdalgerie.com/supplement-tic/mobilis-inaugure-un-centre-technique-pour-surveiller-la-qualite-de-son-reseau-83682" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">Le Soir d'Algérie</a>).
+        The NOC monitored Voice and Data performance live throughout the 11 days. Several
+        degradations were detected and remediated within minutes — fast enough that they
+        didn't translate into visible service quality issues at the venues or for the
+        broadcast feeds.
+      </p>
+      <p>
+        The approach was extended into Mobilis's standard event-monitoring playbook: any
+        subsequent major event (concert, religious gathering, sporting event) now triggers a
+        live-monitoring stand-up using the same template — BTS-level KPI tracking, geographic
+        overlays, and minute-granularity refresh on CS and PS performance.
+      </p>
+
+      <div class="pull-quote">
+        Standard hourly dashboards are a tool for understanding what happened. Minute-granularity dashboards designed for action are a tool for fixing problems while they're still happening.
+      </div>
+    </section>
+
+    <!-- Impact -->
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">11 days</div>
+          <div class="metric-tile-label">Live event coverage</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Minute</div>
+          <div class="metric-tile-label">KPI refresh granularity</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">BTS-level</div>
+          <div class="metric-tile-label">Action granularity for NOC</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">3G + 4G</div>
+          <div class="metric-tile-label">Radio access coverage</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">CS + PS</div>
+          <div class="metric-tile-label">Voice + Data probes</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Playbook</div>
+          <div class="metric-tile-label">Extended to standard event ops</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stack -->
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">SmartCare</span>
+        <span class="stack-pill">PS Probes</span>
+        <span class="stack-pill">CS Probes</span>
+        <span class="stack-pill">SEQ</span>
+        <span class="stack-pill">Hadoop</span>
+        <span class="stack-pill">Hive</span>
+        <span class="stack-pill">Spark</span>
+        <span class="stack-pill">SQL</span>
+        <span class="stack-pill">3G / UMTS</span>
+        <span class="stack-pill">4G / LTE</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="okr.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">Behavioural OKR Framework</div>
+      </a>
+      <a class="proj-nav-link next" href="churn.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">Customer Churn Prediction</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

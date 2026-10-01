@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Churn Prediction — Abdelmalek Nouri</title>
+<meta name="description" content="Multi-signal gradient-boosted churn prediction model for a major Algerian telecom operator. Identified at-risk customers 30+ days before churn became visible in lagging indicators.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-brand">Abdelmalek<span>.</span></a>
+    <div class="nav-links">
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#work" class="active">Work</a>
+      <a href="../index.html#skills">Skills</a>
+      <a href="../index.html#contact" class="nav-cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<main class="project-page">
+  <div class="container-narrow">
+
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="../index.html#work">Work</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Customer Churn Prediction</span>
+    </div>
+
+    <div class="project-header">
+      <div class="project-tag-row">
+        <span class="project-tag tag-ml">ML / Modelling</span>
+        <span class="project-tag project-tag-secondary">2021–22</span>
+        <span class="project-tag project-tag-secondary">Huawei (SmartCare)</span>
+      </div>
+      <h1 class="project-h1">Customer <em>Churn</em> Prediction.</h1>
+      <p class="project-context">
+        End-to-end churn prediction model deployed for a major Algerian telecom operator.
+        Integrated NPS, network experience, traffic, and device signals from four operator
+        systems into a unified gradient-boosted classifier. Outputs fed directly into precision
+        marketing campaigns, contributing to measurable retention improvement.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-cell-label">Vendor</div>
+          <div class="meta-cell-value">Huawei (SmartCare)</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Client</div>
+          <div class="meta-cell-value">Major Algerian operator</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Role</div>
+          <div class="meta-cell-value">Data Analytics Lead</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-cell-label">Year</div>
+          <div class="meta-cell-value">2021 – 2022</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problem -->
+    <section class="proj-section">
+      <h2>The problem</h2>
+      <p>
+        The operator was losing customers at an above-industry rate but couldn't intervene in
+        time — by the time churn was visible in standard reporting (cancelled subscription,
+        zero usage for 30 days), <strong>the customer had already left</strong>. They needed
+        forward-looking churn scoring with enough lead time for marketing intervention.
+      </p>
+      <p>
+        Telecom churn is a multi-signal problem. No single signal is reliable on its own:
+      </p>
+      <ul>
+        <li><strong>Usage drops</strong> happen for many reasons — vacations, illness, secondary lines.</li>
+        <li><strong>NPS declines</strong> are noisy and have low coverage (only customers who respond).</li>
+        <li><strong>Complaint volumes</strong> spike for individual incidents that don't lead to churn.</li>
+        <li><strong>Network experience degradation</strong> matters but only relative to the customer's expectations.</li>
+      </ul>
+      <p>
+        Combining these signals into a reliable forward-looking score required ingesting data
+        from multiple operator systems and engineering features that captured
+        <strong>trends, not snapshots</strong>.
+      </p>
+    </section>
+
+    <!-- Approach -->
+    <section class="proj-section">
+      <h2>Approach</h2>
+
+      <h3>Data integration</h3>
+      <p>Pulled signals from four operator systems and unified them in a Hadoop-based feature store:</p>
+      <ul>
+        <li><strong>CRM.</strong> NPS scores, complaint history, complaint-to-resolution time, plan changes.</li>
+        <li><strong>CEM platform.</strong> Network experience KQIs (drop call rate, throughput, latency) per subscriber.</li>
+        <li><strong>Core Network probes.</strong> Traffic patterns, session-level data, OTT app usage.</li>
+        <li><strong>Billing.</strong> Plan tier, ARPU trends, payment history, top-up frequency.</li>
+      </ul>
+      <p>
+        Spark + Hive ETL pipeline ran weekly to refresh the feature store, with consistent
+        subscriber-level joins across all four systems.
+      </p>
+
+      <h3>Feature engineering</h3>
+      <p>
+        Built rolling-window features that capture trends rather than point-in-time values —
+        the signal that matters for churn is almost always a <em>change</em>, not a level:
+      </p>
+      <ul>
+        <li>30, 60, and 90-day usage trends with delta calculations</li>
+        <li>NPS deltas (change in score over time, not absolute score)</li>
+        <li>Complaint-to-resolution ratio over rolling 60-day windows</li>
+        <li>Traffic volatility (standard deviation of daily usage)</li>
+        <li>Device upgrade signals — new device on the network is a positive engagement signal</li>
+        <li>Recharge pattern changes for prepaid subscribers</li>
+      </ul>
+
+      <h3>Model training</h3>
+      <p>
+        Gradient-boosted classifier (Python, scikit-learn) trained on labelled churn outcomes
+        from a 12-month historical window. Hyperparameter tuning via stratified
+        cross-validation to handle the class imbalance (churn is a rare event). Probability
+        calibration via Platt scaling so the output scores are interpretable as actual
+        churn probabilities — important because marketing needed to make threshold decisions
+        ("intervene above 60% probability").
+      </p>
+    </section>
+
+    <!-- Production -->
+    <section class="proj-section">
+      <h2>Production deployment</h2>
+      <p>
+        Daily scoring pipeline producing per-subscriber churn probability plus the top
+        contributing factors (feature importance per prediction, via SHAP values). The
+        contributing factors mattered as much as the score itself — they let the marketing
+        team tailor interventions:
+      </p>
+      <ul>
+        <li><strong>High-risk + network experience driver</strong> → technical outreach + service credit</li>
+        <li><strong>High-risk + price driver</strong> → personalised plan offer</li>
+        <li><strong>High-risk + competitor signal</strong> → retention package with bonus data</li>
+        <li><strong>Medium-risk</strong> → engagement campaign (educational content, app push)</li>
+      </ul>
+
+      <div class="pull-quote">
+        Identified at-risk customers 30+ days before churn became visible in lagging indicators — long enough for marketing to actually do something about it.
+      </div>
+    </section>
+
+    <!-- Outcome -->
+    <section class="proj-section">
+      <h2>Outcome</h2>
+      <p>
+        Marketing team used the scores to <strong>prioritise retention spend</strong> on
+        customers most likely to leave and most likely to be saved by intervention.
+        Contributed to measurable retention improvement and incremental revenue.
+      </p>
+      <p>
+        The same data integration and feature engineering approach was extended to two adjacent
+        models for the same client — <strong>user segmentation</strong> (behavioural clusters
+        for marketing) and <strong>migration propensity</strong> (predicting 2G/3G users
+        likely to upgrade to 4G when offered). Both reused the unified feature store, which
+        amortised the original integration investment.
+      </p>
+    </section>
+
+    <!-- Impact -->
+    <section class="proj-section">
+      <h2>Impact</h2>
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-tile-value">30+ days</div>
+          <div class="metric-tile-label">Lead time on churn detection</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">4</div>
+          <div class="metric-tile-label">Operator data systems integrated</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">Daily</div>
+          <div class="metric-tile-label">Per-subscriber scoring</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-value">3</div>
+          <div class="metric-tile-label">Downstream models reusing the feature store</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stack -->
+    <section class="proj-section">
+      <h2>Stack</h2>
+      <div class="stack-pills">
+        <span class="stack-pill">Python</span>
+        <span class="stack-pill">scikit-learn</span>
+        <span class="stack-pill">SHAP</span>
+        <span class="stack-pill">Spark</span>
+        <span class="stack-pill">Hive</span>
+        <span class="stack-pill">SQL</span>
+        <span class="stack-pill">SEQ</span>
+        <span class="stack-pill">PS / CS Probes</span>
+        <span class="stack-pill">Tabular ML</span>
+      </div>
+    </section>
+
+    <div class="proj-footer-nav">
+      <a class="proj-nav-link prev" href="medgames.html">
+        <div class="proj-nav-direction">← Previous</div>
+        <div class="proj-nav-title">Mediterranean Games Live Monitoring</div>
+      </a>
+      <a class="proj-nav-link next" href="derm.html">
+        <div class="proj-nav-direction">Next →</div>
+        <div class="proj-nav-title">Dermoscopic Lesion Segmentation</div>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 Abdelmalek Nouri</div>
+      <div>Built from scratch · Algiers, Algeria</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

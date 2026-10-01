@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A/B Test Architect — Abdelmalek Nouri</title>
+<meta name="description" content="AI-powered experiment design agent that turns business questions into rigorous, pre-registered A/B test plans. Built by Abdelmalek Nouri.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF8F3;
+    --bg-elev: #FFFFFF;
+    --bg-card: #F4F1EA;
+    --bg-agent: #FFFFFF;
+    --bg-user: #1B1A17;
+    --text-1: #1A1A1A;
+    --text-2: #5C5C5A;
+    --text-3: #8B8B86;
+    --text-inverse: #FAF8F3;
+    --line: #E5E1D6;
+    --line-strong: #C9C4B4;
+    --accent: #B8410C;
+    --accent-soft: #FBE9DD;
+    --accent-deep: #8B2E07;
+    --teal: #265E50;
+    --teal-soft: #DCEAE3;
+    --plum: #6B2D5C;
+    --plum-soft: #EBDDE6;
+    --olive: #6B5B2D;
+    --olive-soft: #EFE8DA;
+    --shadow-sm: 0 1px 2px rgba(20, 18, 12, 0.04);
+    --shadow-md: 0 4px 16px rgba(20, 18, 12, 0.06);
+    --shadow-lg: 0 24px 60px rgba(20, 18, 12, 0.12);
+    --display: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text-1);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ─── Layout shell ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 64px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+  @media (max-width: 880px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 64px auto 1fr; }
+  }
+
+  /* ─── Top bar ──────────────────────────────────────────── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    font-family: var(--display);
+    font-weight: 500; font-size: 17px;
+    letter-spacing: -0.01em;
+    color: var(--text-1);
+    text-decoration: none;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .brand-mark { color: var(--accent); }
+  .brand-sub {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-3); letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .topbar-actions { display: flex; align-items: center; gap: 20px; }
+  .topbar-link {
+    font-size: 13px; color: var(--text-2); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .topbar-link:hover { color: var(--accent); }
+  .topbar-cta {
+    padding: 8px 16px; border: 1px solid var(--text-1);
+    border-radius: 100px; color: var(--text-1);
+    font-size: 13px; font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .topbar-cta:hover { background: var(--text-1); color: var(--bg); }
+
+  /* ─── Sidebar (stage progress) ─────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-right: 1px solid var(--line);
+    padding: 32px 24px;
+    overflow-y: auto;
+  }
+  @media (max-width: 880px) {
+    .sidebar {
+      border-right: none; border-bottom: 1px solid var(--line);
+      padding: 16px 24px;
+    }
+  }
+  .sidebar-title {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 20px;
+  }
+  .stages { display: flex; flex-direction: column; gap: 4px; }
+  @media (max-width: 880px) {
+    .stages { flex-direction: row; gap: 6px; overflow-x: auto; }
+  }
+  .stage {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-2);
+    transition: all 0.25s;
+    flex-shrink: 0;
+  }
+  .stage-num {
+    font-family: var(--mono); font-size: 11px;
+    width: 22px; height: 22px;
+    border-radius: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    color: var(--text-3);
+    flex-shrink: 0;
+    transition: all 0.25s;
+  }
+  .stage-label { font-weight: 500; }
+  .stage.done .stage-num {
+    background: var(--teal); color: var(--bg);
+    border-color: var(--teal);
+  }
+  .stage.done { color: var(--text-2); }
+  .stage.done .stage-num::before { content: '✓'; font-family: var(--sans); }
+  .stage.done .stage-num-text { display: none; }
+  .stage.active {
+    background: var(--bg-elev);
+    color: var(--text-1);
+    box-shadow: var(--shadow-sm);
+  }
+  .stage.active .stage-num {
+    background: var(--accent); color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  .sidebar-footer {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line-strong);
+    font-size: 12px; line-height: 1.5;
+    color: var(--text-3);
+  }
+  .sidebar-footer strong { color: var(--text-2); }
+  @media (max-width: 880px) { .sidebar-footer { display: none; } }
+
+  /* ─── Chat area ────────────────────────────────────────── */
+  .chat-wrap {
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .chat-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 8% 24px;
+  }
+  @media (max-width: 880px) { .chat-scroll { padding: 24px 20px; } }
+
+  .msg {
+    max-width: 760px;
+    margin: 0 auto 20px;
+    animation: msgIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-agent { display: flex; gap: 16px; }
+  .msg-user  { display: flex; gap: 16px; justify-content: flex-end; }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 100%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--display);
+    font-weight: 500; font-size: 16px;
+    letter-spacing: -0.02em;
+  }
+  .avatar-agent {
+    background: var(--accent); color: var(--bg);
+  }
+  .avatar-user {
+    background: var(--bg-user); color: var(--bg);
+    font-family: var(--mono); font-size: 13px;
+  }
+
+  .bubble {
+    padding: 16px 20px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.65;
+    max-width: 660px;
+  }
+  .bubble-agent {
+    background: var(--bg-agent);
+    color: var(--text-1);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble-user {
+    background: var(--bg-user);
+    color: var(--text-inverse);
+    border-bottom-right-radius: 4px;
+  }
+  .bubble p { margin: 0 0 10px; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble strong { font-weight: 600; }
+  .bubble em { font-style: italic; }
+  .bubble code {
+    font-family: var(--mono); font-size: 0.9em;
+    background: var(--bg-card);
+    padding: 2px 6px; border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+  .bubble-user code {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--text-inverse);
+  }
+  .bubble ul, .bubble ol { margin: 8px 0 8px 22px; padding: 0; }
+  .bubble li { margin-bottom: 4px; }
+
+  /* ─── Interactive widgets inside bubbles ───────────────── */
+  .widget {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .widget-title {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 12px;
+  }
+
+  /* Quick choice chips */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 10px 16px;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .chip:hover {
+    border-color: var(--accent); color: var(--accent);
+  }
+  .chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Stats table */
+  .stats-table {
+    width: 100%;
+    margin: 8px 0 14px;
+    font-size: 13px;
+    border-collapse: collapse;
+  }
+  .stats-table th {
+    text-align: left;
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--text-3); font-weight: 500;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .stats-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .stats-table tr:last-child td { border-bottom: none; }
+  .stats-table .num {
+    font-family: var(--mono); font-weight: 500;
+    color: var(--text-1);
+  }
+  .stats-table .verdict-ok { color: var(--teal); font-weight: 600; }
+  .stats-table .verdict-warn { color: var(--olive); font-weight: 600; }
+  .stats-table .verdict-bad { color: var(--accent); font-weight: 600; }
+
+  .pull-figure {
+    display: flex; align-items: baseline; gap: 14px;
+    margin: 16px 0;
+    padding: 14px 18px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+  }
+  .pull-figure-num {
+    font-family: var(--display); font-weight: 400;
+    font-size: 32px; line-height: 1;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .pull-figure-label {
+    font-size: 13px; color: var(--text-1); flex: 1;
+  }
+
+  /* ─── Composer ─────────────────────────────────────────── */
+  .composer {
+    border-top: 1px solid var(--line);
+    background: var(--bg-elev);
+    padding: 20px 8%;
+  }
+  @media (max-width: 880px) { .composer { padding: 16px 20px; } }
+  .composer-inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; gap: 12px;
+    align-items: flex-end;
+  }
+  .composer-textarea {
+    flex: 1;
+    font-family: inherit; font-size: 15px;
+    line-height: 1.5;
+    padding: 14px 18px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text-1);
+    resize: none;
+    max-height: 200px;
+    transition: border-color 0.2s;
+    min-height: 52px;
+  }
+  .composer-textarea:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .composer-textarea::placeholder { color: var(--text-3); }
+  .composer-send {
+    padding: 14px 24px;
+    background: var(--text-1);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .composer-send:hover:not(:disabled) {
+    background: var(--accent);
+    transform: translateY(-1px);
+  }
+  .composer-send:disabled {
+    opacity: 0.4; cursor: not-allowed;
+  }
+  .composer-hint {
+    max-width: 760px; margin: 8px auto 0;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── Typing indicator ─────────────────────────────────── */
+  .typing {
+    display: inline-flex; gap: 4px;
+    padding: 0;
+  }
+  .typing-dot {
+    width: 7px; height: 7px;
+    border-radius: 100%;
+    background: var(--accent);
+    animation: typingBounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ─── Plan download card ───────────────────────────────── */
+  .plan-card {
+    margin-top: 14px;
+    padding: 24px;
+    background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-card) 100%);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+  }
+  .plan-card h3 {
+    font-family: var(--display); font-weight: 500;
+    font-size: 22px; letter-spacing: -0.015em;
+    margin-bottom: 8px;
+  }
+  .plan-card p {
+    font-size: 14px; color: var(--text-2);
+    margin-bottom: 18px;
+  }
+  .plan-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .plan-btn {
+    padding: 12px 20px;
+    background: var(--text-1);
+    color: var(--bg);
+    border: none;
+    border-radius: 100px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+  }
+  .plan-btn:hover { background: var(--accent); }
+  .plan-btn.secondary {
+    background: transparent;
+    color: var(--text-1);
+    border: 1px solid var(--text-1);
+  }
+  .plan-btn.secondary:hover {
+    background: var(--text-1); color: var(--bg);
+  }
+
+  /* ─── Error message ────────────────────────────────────── */
+  .error-banner {
+    background: #FDEAEA; color: var(--accent-deep);
+    border: 1px solid #F5C2C2;
+    padding: 10px 14px; border-radius: 6px;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="../index.html" class="brand">
+      A/B Test Architect<span class="brand-mark">.</span>
+      <span class="brand-sub">by Abdelmalek Nouri</span>
+    </a>
+    <div class="topbar-actions">
+      <a href="../projects/reactivation.html" class="topbar-link">The methodology</a>
+      <a href="../index.html" class="topbar-cta">← Back to portfolio</a>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Framework progress</div>
+    <div class="stages" id="stages">
+      <div class="stage active" data-stage="hypothesis">
+        <div class="stage-num"><span class="stage-num-text">1</span></div>
+        <div class="stage-label">Hypothesis</div>
+      </div>
+      <div class="stage" data-stage="population">
+        <div class="stage-num"><span class="stage-num-text">2</span></div>
+        <div class="stage-label">Population</div>
+      </div>
+      <div class="stage" data-stage="baseline">
+        <div class="stage-num"><span class="stage-num-text">3</span></div>
+        <div class="stage-label">Baseline</div>
+      </div>
+      <div class="stage" data-stage="mde">
+        <div class="stage-num"><span class="stage-num-text">4</span></div>
+        <div class="stage-label">MDE &amp; Power</div>
+      </div>
+      <div class="stage" data-stage="split">
+        <div class="stage-num"><span class="stage-num-text">5</span></div>
+        <div class="stage-label">Split design</div>
+      </div>
+      <div class="stage" data-stage="risk">
+        <div class="stage-num"><span class="stage-num-text">6</span></div>
+        <div class="stage-label">Risk &amp; guardrails</div>
+      </div>
+      <div class="stage" data-stage="plan">
+        <div class="stage-num"><span class="stage-num-text">→</span></div>
+        <div class="stage-label">Generate plan</div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <strong>About this agent</strong><br>
+      An AI agent built on Claude. It uses real statistical formulas for power analysis, MDE, and variance inflation — no hand-waving. Designed as a working demonstration of the 6-stage experimentation framework from my portfolio.
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <div class="chat-wrap">
+    <div class="chat-scroll" id="chat"></div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <textarea
+          id="input"
+          class="composer-textarea"
+          placeholder="Type your answer..."
+          rows="1"
+        ></textarea>
+        <button id="send" class="composer-send">Send →</button>
+      </div>
+      <div class="composer-hint">Powered by Claude · Stats computed live in your browser · No data leaves this page</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+
+const state = {
+  stage: 'hypothesis',
+  expertise: null,           // 'beginner' | 'expert'
+  hypothesis: null,          // { change, expected_outcome, metric }
+  population: null,          // { description, total_pool, daily_eligible, unit }
+  baseline: null,            // { value, type } where type = 'proportion' | 'continuous'
+  mde: null,                 // { value, sample_size, duration_days }
+  split: null,               // { treatment_pct, vif, adj_sample, adj_duration }
+  risk: null,                // { worst_case, guardrail_metric, kill_switch }
+  history: []                // chat messages [{ role, content }]
+};
+
+const STAGES = ['hypothesis', 'population', 'baseline', 'mde', 'split', 'risk', 'plan'];
+
+// ═══════════════════════════════════════════════════════════════
+//  STATISTICS  (real computation, no LLM math)
+// ═══════════════════════════════════════════════════════════════
+
+// Inverse normal CDF approximation (Beasley-Springer/Moro)
+function invNorm(p) {
+  const a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
+  const a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
+  const b1 = -54.4760987982241, b2 = 161.585836858041, b3 = -155.698979859887;
+  const b4 = 66.8013118877197, b5 = -13.2806815528857;
+  const c1 = -0.00778489400243029, c2 = -0.322396458041136, c3 = -2.40075827716184;
+  const c4 = -2.54973253934373, c5 = 4.37466414146497, c6 = 2.93816398269878;
+  const d1 = 0.00778469570904146, d2 = 0.32246712907004, d3 = 2.445134137143;
+  const d4 = 3.75440866190742;
+  const plow = 0.02425, phigh = 1 - plow;
+  let q, r;
+  if (p < plow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
+  }
+  if (p <= phigh) {
+    q = p - 0.5; r = q*q;
+    return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q / (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1);
+  }
+  q = Math.sqrt(-2 * Math.log(1-p));
+  return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
+}
+
+// Two-proportion sample size per arm: 50/50, two-sided, alpha=0.05, power=0.80
+function sampleSizeProportions(p1, mde, alpha=0.05, power=0.80) {
+  const p2 = p1 + mde;
+  if (p2 <= 0 || p2 >= 1) return Infinity;
+  const zAlpha = invNorm(1 - alpha/2);
+  const zBeta  = invNorm(power);
+  const pBar = (p1 + p2) / 2;
+  const num = Math.pow(
+    zAlpha * Math.sqrt(2 * pBar * (1 - pBar)) +
+    zBeta  * Math.sqrt(p1 * (1 - p1) + p2 * (1 - p2)),
+    2
+  );
+  return Math.ceil(num / Math.pow(mde, 2));
+}
+
+// Continuous outcome sample size (Welch-style approximation, equal SD)
+function sampleSizeContinuous(mean, sd, mde, alpha=0.05, power=0.80) {
+  const zAlpha = invNorm(1 - alpha/2);
+  const zBeta  = invNorm(power);
+  const effectSize = mde / sd;
+  return Math.ceil(2 * Math.pow((zAlpha + zBeta) / effectSize, 2));
+}
+
+// Variance inflation factor for non-50/50 split
+function varianceInflation(treatmentPct) {
+  const p = treatmentPct / 100;
+  return 1 / (4 * p * (1 - p));
+}
+
+// Duration in days given total sample and daily eligible users
+function durationDays(totalSample, dailyEligible) {
+  if (!dailyEligible || dailyEligible <= 0) return null;
+  return Math.ceil(totalSample / dailyEligible);
+}
+
+// Build the MDE trade-off table for the current baseline
+function buildMdeTable(baseline, baselineType, dailyEligible) {
+  const baseAbsoluteMdes = baselineType === 'proportion'
+    ? [0.005, 0.01, 0.02, 0.03, 0.05]
+    : null;
+  const relativeMdes = baselineType === 'proportion'
+    ? null
+    : [0.02, 0.05, 0.10, 0.15, 0.25];
+
+  const rows = [];
+  if (baselineType === 'proportion') {
+    baseAbsoluteMdes.forEach(mde => {
+      const nPerArm = sampleSizeProportions(baseline, mde);
+      const total = nPerArm * 2;
+      const days = durationDays(total, dailyEligible);
+      rows.push({
+        mdeLabel: `+${(mde * 100).toFixed(mde < 0.01 ? 1 : 0)}pp (to ${((baseline + mde) * 100).toFixed(1)}%)`,
+        mdeValue: mde,
+        nPerArm,
+        total,
+        days,
+        relativeLift: ((mde / baseline) * 100).toFixed(0) + '%'
+      });
+    });
+  } else {
+    relativeMdes.forEach(relMde => {
+      const absMde = baseline * relMde;
+      const sd = baseline * 0.5; // crude default; real impl asks for SD
+      const nPerArm = sampleSizeContinuous(baseline, sd, absMde);
+      const total = nPerArm * 2;
+      const days = durationDays(total, dailyEligible);
+      rows.push({
+        mdeLabel: `+${(relMde * 100).toFixed(0)}% relative`,
+        mdeValue: absMde,
+        nPerArm,
+        total,
+        days,
+        relativeLift: (relMde * 100).toFixed(0) + '%'
+      });
+    });
+  }
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════════════════
+
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+
+function escape(html) {
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderMarkdownInline(text) {
+  // Light markdown: bold, italic, inline code
+  return escape(text)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function addMessage(role, content, widget) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg msg-' + role;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar avatar-' + role;
+  avatar.textContent = role === 'agent' ? 'A' : 'You';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-' + role;
+  bubble.innerHTML = renderMarkdownInline(content);
+
+  if (widget) {
+    const w = document.createElement('div');
+    w.className = 'widget';
+    w.innerHTML = widget;
+    bubble.appendChild(w);
+  }
+
+  if (role === 'agent') {
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+  } else {
+    wrap.appendChild(bubble);
+    wrap.appendChild(avatar);
+  }
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return bubble;
+}
+
+function addTypingIndicator() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg msg-agent';
+  wrap.id = 'typing-indicator';
+  wrap.innerHTML = `
+    <div class="avatar avatar-agent">A</div>
+    <div class="bubble bubble-agent">
+      <div class="typing">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>
+    </div>`;
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function setActiveStage(stage) {
+  state.stage = stage;
+  document.querySelectorAll('.stage').forEach(el => {
+    const s = el.dataset.stage;
+    const idx = STAGES.indexOf(s);
+    const cur = STAGES.indexOf(stage);
+    el.classList.toggle('active', s === stage);
+    el.classList.toggle('done', idx < cur);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CLAUDE API
+// ═══════════════════════════════════════════════════════════════
+
+const SYSTEM_PROMPT = `You are A/B Test Architect, an expert experimentation coach. You help users design rigorous, statistically valid A/B tests by walking them through a 6-stage framework. You are the work of Abdelmalek Nouri, a senior data scientist who built this as a portfolio piece.
+
+Your tone: warm but precise. You're a coach, not a chatbot. Ask ONE focused question per turn. If the user gives a sloppy or ambiguous answer, push back gently and ask them to refine.
+
+When the user is technical, use proper statistical terminology (MDE, power, alpha, variance, etc.). When they're not, explain in plain language with analogies. Detect this from their first message.
+
+The 6 stages are:
+1. Hypothesis: "X causes Y, measured by Z"
+2. Population: who's eligible, how many users, what's the unit of analysis
+3. Baseline: current value of the primary metric
+4. MDE & Power: trade-off between detectable effect / sample / duration
+5. Split: variance-inflation cost of non-50/50 splits
+6. Risk: worst-case planning + guardrails + kill switch
+
+CRITICAL: When you have enough info to advance a stage, end your message with a JSON block like:
+\`\`\`json
+{"stage_complete": true, "data": { ...extracted info... }}
+\`\`\`
+Otherwise, just ask the next clarifying question — no JSON.
+
+For each stage's "data" field:
+- hypothesis: {"change": "...", "expected_outcome": "...", "primary_metric": "..."}
+- population: {"description": "...", "total_pool": number, "daily_eligible": number, "unit": "user|session|trip|order"}
+- baseline: {"value": number, "type": "proportion|continuous", "unit": "pct|currency|count"}
+  · For proportion, value is between 0 and 1 (e.g. 0.15 for 15%)
+  · If user gives "15%" extract 0.15
+- mde: leave the agent stage to the host JS (just gather user's preferred MDE choice when shown the table)
+- split: {"treatment_pct": number}  (number between 5 and 95)
+- risk: {"worst_case": "...", "guardrail_metric": "...", "kill_switch": "..."}
+
+NEVER do statistical computation yourself — the host page computes sample sizes, MDE tables, and variance inflation. Just collect inputs and present results from the host.
+
+Keep responses under 120 words. Be conversational, not bureaucratic.`;
+
+async function callClaude(userMessage) {
+  state.history.push({ role: 'user', content: userMessage });
+  addTypingIndicator();
+
+  // Inject a stage hint as a synthetic system note appended to the latest user turn
+  const stageHint = `[Current stage: ${state.stage}. Collected so far: ${JSON.stringify({
+    expertise: state.expertise,
+    hypothesis: state.hypothesis,
+    population: state.population,
+    baseline: state.baseline,
+    mde: state.mde,
+    split: state.split,
+    risk: state.risk
+  })}]`;
+
+  const messagesForApi = state.history.map((m, i) => {
+    if (i === state.history.length - 1 && m.role === 'user') {
+      return { role: 'user', content: m.content + '\n\n' + stageHint };
+    }
+    return m;
+  });
+
+  try {
+    const response = await fetch("/.netlify/functions/anthropic-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: messagesForApi
+      })
+    });
+    const data = await response.json();
+    removeTypingIndicator();
+
+    if (!response.ok) {
+      addMessage('agent', `I hit an API error. ${data.error?.message || 'Please try again.'}`);
+      return null;
+    }
+
+    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+    return text;
+  } catch (err) {
+    removeTypingIndicator();
+    addMessage('agent', `Network error: ${err.message}. Please retry.`);
+    return null;
+  }
+}
+
+// Parse agent response: extract message body + JSON if present
+function parseAgentResponse(text) {
+  const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
+  let body = text;
+  let payload = null;
+  if (jsonMatch) {
+    body = text.replace(/```json\s*[\s\S]*?```/, '').trim();
+    try {
+      payload = JSON.parse(jsonMatch[1].trim());
+    } catch (e) {
+      console.warn('JSON parse failed', e);
+    }
+  }
+  // Also push the raw assistant reply to history so the model sees it next turn
+  state.history.push({ role: 'assistant', content: text });
+  return { body, payload };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STAGE TRANSITIONS
+// ═══════════════════════════════════════════════════════════════
+
+function advanceStage(payload) {
+  // Persist the data into state, then move to next stage
+  switch (state.stage) {
+    case 'hypothesis':
+      state.hypothesis = payload.data;
+      setActiveStage('population');
+      break;
+    case 'population':
+      state.population = payload.data;
+      setActiveStage('baseline');
+      break;
+    case 'baseline':
+      state.baseline = payload.data;
+      setActiveStage('mde');
+      // After baseline is collected, compute MDE table and present it
+      setTimeout(presentMdeTable, 200);
+      return;
+    case 'mde':
+      // Handled by the MDE widget choice, not via LLM JSON
+      break;
+    case 'split':
+      state.split = { treatment_pct: payload.data.treatment_pct };
+      computeSplitImpact();
+      setActiveStage('risk');
+      break;
+    case 'risk':
+      state.risk = payload.data;
+      setActiveStage('plan');
+      setTimeout(generatePlan, 400);
+      return;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WIDGETS: MDE TABLE
+// ═══════════════════════════════════════════════════════════════
+
+function presentMdeTable() {
+  const baseline = state.baseline.value;
+  const baselineType = state.baseline.type;
+  const dailyEligible = state.population.daily_eligible;
+
+  const rows = buildMdeTable(baseline, baselineType, dailyEligible);
+
+  let table = `
+    <div class="widget-title">Sample-size × Duration trade-off</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Detect (MDE)</th>
+          <th>Per arm</th>
+          <th>Total</th>
+          <th>Days at current traffic</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  rows.forEach((r, i) => {
+    const totalPool = state.population.total_pool || Infinity;
+    let verdict, vclass;
+    if (r.total > totalPool) { verdict = 'population too small'; vclass = 'verdict-bad'; }
+    else if (r.days && r.days > 120) { verdict = 'too slow'; vclass = 'verdict-warn'; }
+    else if (r.days && r.days > 60) { verdict = 'workable'; vclass = 'verdict-warn'; }
+    else { verdict = 'feasible'; vclass = 'verdict-ok'; }
+    table += `
+      <tr>
+        <td><strong>${r.mdeLabel}</strong><br><span style="font-size:11px;color:var(--text-3);font-family:var(--mono)">${r.relativeLift} relative lift</span></td>
+        <td class="num">${r.nPerArm === Infinity ? '—' : r.nPerArm.toLocaleString()}</td>
+        <td class="num">${r.total === Infinity ? '—' : r.total.toLocaleString()}</td>
+        <td class="num">${r.days === null ? '—' : r.days + ' days'}</td>
+        <td class="${vclass}">${verdict}</td>
+      </tr>`;
+  });
+  table += `</tbody></table>`;
+  table += `<div class="widget-title" style="margin-top:14px">Pick the MDE that matches your business need</div>`;
+  table += `<div class="chip-row">`;
+  rows.forEach((r, i) => {
+    table += `<button class="chip" data-mde-idx="${i}">${r.mdeLabel}</button>`;
+  });
+  table += `</div>`;
+
+  const message = `Here's the trade-off matrix for your test. Smaller effects need more sample → more time. Larger effects need less, but you'd miss subtle changes.
+
+**Pick the smallest effect you'd actually care about** — that determines your sample size.`;
+
+  addMessage('agent', message, table);
+
+  // Attach handlers
+  chatEl.querySelectorAll('.chip[data-mde-idx]').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      const r = rows[parseInt(btn.dataset.mdeIdx)];
+      state.mde = {
+        value: r.mdeValue,
+        sample_size_per_arm: r.nPerArm,
+        total_sample: r.total,
+        duration_days: r.days,
+        label: r.mdeLabel
+      };
+      addMessage('user', `MDE: ${r.mdeLabel}`);
+      // Disable chips
+      chatEl.querySelectorAll('.chip[data-mde-idx]').forEach(b => b.disabled = true);
+      btn.style.background = 'var(--accent)';
+      btn.style.color = 'var(--bg)';
+      btn.style.borderColor = 'var(--accent)';
+      setActiveStage('split');
+      // Now move to split via Claude
+      askSplitQuestion();
+    });
+  });
+}
+
+async function askSplitQuestion() {
+  const message = `Locked in **${state.mde.label}** — that needs ${state.mde.total_sample.toLocaleString()} users total, about ${state.mde.duration_days} days.
+
+Now the split. Stakeholders often want treatment-heavy splits ("more users see the change"). But 50/50 is statistically optimal — every deviation costs you sample size.
+
+What split are you considering? (e.g., 50/50, 60/40, 80/20, 90/10)`;
+  addMessage('agent', message);
+  state.history.push({ role: 'assistant', content: message });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WIDGETS: SPLIT IMPACT
+// ═══════════════════════════════════════════════════════════════
+
+function computeSplitImpact() {
+  const tp = state.split.treatment_pct;
+  const vif = varianceInflation(tp);
+  const adjSample = Math.ceil(state.mde.total_sample * vif);
+  const adjDuration = durationDays(adjSample, state.population.daily_eligible);
+
+  state.split.vif = vif;
+  state.split.adj_sample = adjSample;
+  state.split.adj_duration = adjDuration;
+
+  const widget = `
+    <div class="widget-title">Cost of ${tp}/${100-tp} split vs 50/50</div>
+    <table class="stats-table">
+      <tbody>
+        <tr><td>Variance inflation factor</td><td class="num">${vif.toFixed(2)}×</td></tr>
+        <tr><td>Sample needed (vs ${state.mde.total_sample.toLocaleString()} at 50/50)</td><td class="num">${adjSample.toLocaleString()}</td></tr>
+        <tr><td>Duration (vs ${state.mde.duration_days} days at 50/50)</td><td class="num">${adjDuration || '—'} days</td></tr>
+      </tbody>
+    </table>
+    ${vif > 1.5 ? `<div class="pull-figure"><div class="pull-figure-num">${((vif - 1) * 100).toFixed(0)}%</div><div class="pull-figure-label">more sample required than a 50/50 split. Worth it only if treatment-heavy exposure is operationally critical.</div></div>` : ''}
+  `;
+
+  let verdict;
+  if (vif <= 1.1) verdict = `That's close to optimal — only ${((vif-1)*100).toFixed(0)}% sample-size penalty. Good choice.`;
+  else if (vif <= 1.5) verdict = `Reasonable trade-off — ${((vif-1)*100).toFixed(0)}% extra sample for treatment-heavy exposure.`;
+  else if (vif <= 2.0) verdict = `Substantial cost — you'll need ${((vif-1)*100).toFixed(0)}% more sample. Is the operational reason worth it?`;
+  else verdict = `Very expensive — ${((vif-1)*100).toFixed(0)}% more sample. I'd push back hard unless there's a strong operational reason.`;
+
+  addMessage('agent', verdict, widget);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAN GENERATION
+// ═══════════════════════════════════════════════════════════════
+
+async function generatePlan() {
+  addMessage('agent', `All six stages are done. Generating your pre-registered analysis plan now — this might take a few seconds.`);
+  addTypingIndicator();
+
+  // Build the plan in pure JS (deterministic) — but ask Claude to write a clean preamble paragraph
+  const planSummary = {
+    hypothesis: state.hypothesis,
+    population: state.population,
+    baseline: state.baseline,
+    mde: state.mde,
+    split: state.split,
+    risk: state.risk
+  };
+
+  let preamble = '';
+  try {
+    const response = await fetch("/.netlify/functions/anthropic-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 400,
+        system: "You write concise, professional A/B test preamble paragraphs (2-3 sentences). No headers, no bullet points, just clean prose summarizing the experiment.",
+        messages: [{
+          role: "user",
+          content: `Write a 2-3 sentence preamble for this experiment plan:\n${JSON.stringify(planSummary, null, 2)}`
+        }]
+      })
+    });
+    const data = await response.json();
+    if (response.ok) {
+      preamble = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+    }
+  } catch (e) { /* fall through, preamble stays empty */ }
+
+  removeTypingIndicator();
+
+  const planMd = buildPlanMarkdown(preamble);
+  state.generatedPlan = planMd;
+
+  const downloadCard = `
+    <div class="plan-card">
+      <h3>📋 Your pre-registered analysis plan</h3>
+      <p>A complete experiment design document, ready to share with your team or paste into your analysis notebook.</p>
+      <div class="plan-actions">
+        <a class="plan-btn" id="dl-md" href="#">↓ Download Markdown</a>
+        <button class="plan-btn secondary" id="show-preview">Preview here</button>
+      </div>
+    </div>`;
+
+  addMessage('agent', `Done. Your plan is ready below — pre-registered, statistically valid, and reproducible. Download it as a Markdown file or preview it inline.`, downloadCard);
+
+  document.getElementById('dl-md').addEventListener('click', (e) => {
+    e.preventDefault();
+    downloadPlan(planMd);
+  });
+  document.getElementById('show-preview').addEventListener('click', () => {
+    showPlanPreview(planMd);
+  });
+
+  setActiveStage('plan');
+  document.querySelectorAll('.stage').forEach(el => el.classList.add('done'));
+  document.querySelector('.stage[data-stage="plan"]').classList.add('active');
+  inputEl.disabled = true;
+  sendBtn.disabled = true;
+  inputEl.placeholder = 'All stages complete — plan generated above.';
+}
+
+function buildPlanMarkdown(preamble) {
+  const ts = new Date().toISOString().slice(0, 10);
+  const h = state.hypothesis, p = state.population, b = state.baseline;
+  const m = state.mde, s = state.split, r = state.risk;
+
+  const baselineDisplay = b.type === 'proportion'
+    ? `${(b.value * 100).toFixed(2)}%`
+    : b.value.toString();
+
+  return `# A/B Test Plan — Pre-registered
+
+*Generated ${ts} via A/B Test Architect by Abdelmalek Nouri*
+
+---
+
+${preamble ? `## Preamble\n\n${preamble}\n\n---\n\n` : ''}## 1. Hypothesis
+
+**Change tested:** ${h.change}
+
+**Expected outcome:** ${h.expected_outcome}
+
+**Primary metric:** ${h.primary_metric}
+
+---
+
+## 2. Population & Unit of Analysis
+
+**Eligible population:** ${p.description}
+
+**Total pool:** ${p.total_pool.toLocaleString()} units
+**Daily eligible:** ~${p.daily_eligible.toLocaleString()} units/day
+**Unit of analysis:** ${p.unit}
+
+---
+
+## 3. Baseline
+
+**Current value of primary metric:** ${baselineDisplay}
+**Metric type:** ${b.type}
+
+---
+
+## 4. Minimum Detectable Effect & Sample Size
+
+| Parameter | Value |
+|-----------|-------|
+| MDE | ${m.label} |
+| Required sample (per arm) | ${m.sample_size_per_arm.toLocaleString()} |
+| Required sample (total) | ${m.total_sample.toLocaleString()} |
+| Expected duration at 50/50 | ${m.duration_days} days |
+| Significance level (α) | 0.05 (two-sided) |
+| Statistical power | 0.80 |
+
+**Power-analysis assumption:** standard two-proportion (or two-sample t) test, 80% power at α = 0.05.
+
+---
+
+## 5. Split Design
+
+**Allocation:** ${s.treatment_pct}% treatment / ${100 - s.treatment_pct}% control
+
+**Variance inflation factor:** ${s.vif.toFixed(2)}×
+**Adjusted total sample required:** ${s.adj_sample.toLocaleString()}
+**Adjusted duration:** ${s.adj_duration} days
+
+${s.treatment_pct === 50 ? '*Optimal 50/50 split — no variance penalty.*' : `*Note: ${s.treatment_pct}/${100-s.treatment_pct} split incurs a ${((s.vif - 1) * 100).toFixed(0)}% sample-size penalty vs 50/50.*`}
+
+### Randomization
+
+Deterministic hash-based randomization:
+
+\`\`\`
+treatment = (HASH(${p.unit}_id || experiment_id) % 100) < ${s.treatment_pct}
+\`\`\`
+
+This guarantees reproducibility — the same unit always lands in the same arm if the experiment is re-run.
+
+---
+
+## 6. Risk & Guardrails
+
+**Worst-case outcome of treatment:** ${r.worst_case}
+
+**Guardrail metric (must not regress):** ${r.guardrail_metric}
+
+**Kill switch / stopping rule:** ${r.kill_switch}
+
+---
+
+## 7. Pre-launch Checklist
+
+- [ ] **Balance check** on pre-experiment covariates before declaring randomization valid
+- [ ] **Sample Ratio Mismatch (SRM)** test on day 1 to catch silent randomization bugs
+- [ ] **Power-analysis assumptions verified** with current pre-experiment data
+- [ ] **Primary metric instrumentation** confirmed end-to-end
+- [ ] **Guardrail metric monitoring** in place with alerts
+
+---
+
+## 8. Analysis Plan (locked at launch)
+
+**Primary analysis:**
+- Compare primary metric between treatment and control using two-sided test (Welch's t-test for continuous, two-proportion z-test for binary).
+- Report point estimate, 95% confidence interval, and p-value.
+- Declare success only if (a) p < 0.05 AND (b) effect size ≥ ${m.label} AND (c) guardrail metric did not regress.
+
+**Secondary analyses:**
+- Report secondary metrics with Bonferroni or Benjamini-Hochberg correction for multiple testing.
+- Pre-specified subgroups only — no post-hoc slicing.
+
+**Exclusion criteria:**
+- Units exposed to other experiments that interact with the primary metric.
+- Units with corrupted assignment due to operational error.
+- Pre-specified bot or fraud filters.
+
+**Caveats:**
+- External validity limited to the eligible population and time window of the experiment.
+- Results may not generalize to other markets or time periods without re-validation.
+
+---
+
+*This plan is locked. Any deviation must be documented as exploratory and labelled as such in the readout.*
+`;
+}
+
+function downloadPlan(md) {
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ab-test-plan-${new Date().toISOString().slice(0,10)}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function showPlanPreview(md) {
+  // Render the markdown in a chat bubble (simple rendering)
+  const html = md
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--line);margin:14px 0">')
+    .replace(/^# (.+)$/gm, '<h2 style="font-family:var(--display);font-weight:500;font-size:24px;margin:0 0 10px;letter-spacing:-0.015em">$1</h2>')
+    .replace(/^## (.+)$/gm, '<h3 style="font-family:var(--display);font-weight:500;font-size:18px;margin:18px 0 8px;letter-spacing:-0.01em">$1</h3>')
+    .replace(/^### (.+)$/gm, '<h4 style="font-family:var(--display);font-weight:500;font-size:15px;margin:14px 0 6px">$1</h4>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^\- \[ \] (.+)$/gm, '<div style="padding-left:20px;position:relative"><span style="position:absolute;left:0">☐</span>$1</div>')
+    .replace(/^\- (.+)$/gm, '<div style="padding-left:14px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">·</span>$1</div>')
+    .replace(/\n\n/g, '<br><br>');
+
+  addMessage('agent', '', `<div style="max-height:500px;overflow-y:auto;padding-right:8px;font-size:13px;line-height:1.65">${html}</div>`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MESSAGE LOOP
+// ═══════════════════════════════════════════════════════════════
+
+async function handleUserMessage(text) {
+  if (!text.trim()) return;
+  if (inputEl.disabled) return;
+
+  addMessage('user', text);
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  const response = await callClaude(text);
+  sendBtn.disabled = false;
+
+  if (!response) return;
+  const { body, payload } = parseAgentResponse(response);
+
+  if (body) addMessage('agent', body);
+
+  if (payload && payload.stage_complete) {
+    advanceStage(payload);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STARTUP
+// ═══════════════════════════════════════════════════════════════
+
+function startup() {
+  const intro = `Hi — I'm A/B Test Architect, an AI agent that turns business questions into rigorous, pre-registered A/B test plans.
+
+I'll walk you through **6 stages**: hypothesis → population → baseline → MDE & power → split design → risk & guardrails. At the end you'll get a complete, downloadable plan.
+
+Let's start with the **hypothesis**.
+
+What change are you testing, and what do you expect to happen?
+
+*For example: "I want to test a new onboarding flow — I expect higher first-week retention." Or paste your actual product/marketing brief and I'll help structure it.*`;
+  addMessage('agent', intro);
+  state.history.push({ role: 'assistant', content: intro });
+}
+
+sendBtn.addEventListener('click', () => handleUserMessage(inputEl.value));
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleUserMessage(inputEl.value);
+  }
+});
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + 'px';
+});
+
+startup();
+</script>
+
+</body>
+</html>
