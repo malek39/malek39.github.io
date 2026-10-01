@@ -713,18 +713,37 @@ function ensureEngine(onProgress) {
 }
 
 // OpenAI-style chat completion against the in-browser engine.
-async function llmComplete({ system, messages, max_tokens = 800, temperature = 0.6 }) {
+// Pass onToken(delta) to stream tokens as they generate; otherwise returns the full string.
+async function llmComplete({ system, messages, max_tokens = 800, temperature = 0.6, onToken = null }) {
   const engine = await ensureEngine();
   const msgs = [];
   if (system) msgs.push({ role: 'system', content: system });
   for (const m of messages) msgs.push({ role: m.role, content: m.content });
+
+  if (onToken) {
+    const stream = await engine.chat.completions.create({
+      messages: msgs, max_tokens, temperature, stream: true
+    });
+    let full = '';
+    for await (const chunk of stream) {
+      const delta = chunk && chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content;
+      if (delta) { full += delta; onToken(delta); }
+    }
+    return full;
+  }
+
   const resp = await engine.chat.completions.create({
-    messages: msgs,
-    max_tokens,
-    temperature,
-    stream: false
+    messages: msgs, max_tokens, temperature, stream: false
   });
   return (resp && resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';
+}
+
+// Hide a (possibly partial) ```json … ``` payload while streaming so it never flashes on screen.
+function stripJsonBlock(t) {
+  let i = t.indexOf('```json');
+  if (i === -1) i = t.indexOf('```');
+  let s = i !== -1 ? t.slice(0, i) : t;
+  return s.replace(/`+\s*$/, '').trim();
 }
 
 // First-run gate: visitor downloads the model once, with a progress bar, before chatting.
@@ -928,18 +947,31 @@ async function callAgent(userMessage) {
     return m;
   });
 
+  let acc = '';
+  let bubble = null;
   try {
-    const text = await llmComplete({
+    await llmComplete({
       system: SYSTEM_PROMPT,
       messages: messagesForApi,
       max_tokens: 1000,
-      temperature: 0.6
+      temperature: 0.6,
+      onToken: (delta) => {
+        if (!bubble) { removeTypingIndicator(); bubble = addMessage('agent', ''); }
+        acc += delta;
+        bubble.innerHTML = renderMarkdownInline(stripJsonBlock(acc));
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }
     });
     removeTypingIndicator();
-    return text;
+    if (!bubble) bubble = addMessage('agent', '');
+    return { raw: acc, bubble };
   } catch (err) {
     removeTypingIndicator();
-    addMessage('agent', `The in-browser model hit an error: ${err.message}. Please retry.`);
+    if (bubble) {
+      bubble.innerHTML = renderMarkdownInline(`The in-browser model hit an error: ${err.message}. Please retry.`);
+    } else {
+      addMessage('agent', `The in-browser model hit an error: ${err.message}. Please retry.`);
+    }
     return null;
   }
 }
@@ -1353,13 +1385,14 @@ async function handleUserMessage(text) {
   inputEl.style.height = 'auto';
   sendBtn.disabled = true;
 
-  const response = await callAgent(text);
+  const result = await callAgent(text);
   sendBtn.disabled = false;
 
-  if (!response) return;
-  const { body, payload } = parseAgentResponse(response);
+  if (!result) return;
+  const { body, payload } = parseAgentResponse(result.raw);
 
-  if (body) addMessage('agent', body);
+  // The response already streamed into result.bubble; finalize it with the JSON payload stripped out.
+  if (result.bubble) result.bubble.innerHTML = renderMarkdownInline(body || '…');
 
   if (payload && payload.stage_complete) {
     advanceStage(payload);
