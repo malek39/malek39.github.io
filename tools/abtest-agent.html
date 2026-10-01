@@ -504,7 +504,7 @@
 
     <div class="sidebar-footer">
       <strong>About this agent</strong><br>
-      An AI agent built on Claude. It uses real statistical formulas for power analysis, MDE, and variance inflation — no hand-waving. Designed as a working demonstration of the 6-stage experimentation framework from my portfolio.
+      An AI agent powered by Qwen2.5 — an open-source LLM that runs entirely in your browser via WebGPU, with no server, no API keys, and no data leaving your machine. It uses real statistical formulas for power analysis, MDE, and variance inflation — no hand-waving. A working demonstration of the 6-stage experimentation framework from my portfolio.
     </div>
   </aside>
 
@@ -522,7 +522,7 @@
         ></textarea>
         <button id="send" class="composer-send">Send →</button>
       </div>
-      <div class="composer-hint">Powered by Claude · Stats computed live in your browser · No data leaves this page</div>
+      <div class="composer-hint">Powered by Qwen2.5 — an open-source LLM running in your browser (WebGPU) · Stats computed live · No data leaves this page</div>
     </div>
   </div>
 
@@ -662,6 +662,132 @@ const chatEl = document.getElementById('chat');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 
+// ═══════════════════════════════════════════════════════════════
+//  IN-BROWSER LLM  (WebLLM · open-source model · runs on WebGPU)
+// ═══════════════════════════════════════════════════════════════
+
+const LLM = {
+  version: "0.2.85",
+  preferred: [
+    "Qwen2.5-3B-Instruct-q4f16_1-MLC",
+    "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
+    "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+  ],
+  engine: null,
+  enginePromise: null,
+  modelId: null
+};
+
+function webgpuAvailable() {
+  return typeof navigator !== 'undefined' && !!navigator.gpu;
+}
+
+function pickModel(webllm) {
+  const ids = (webllm.prebuiltAppConfig && webllm.prebuiltAppConfig.model_list || []).map(m => m.model_id);
+  for (const p of LLM.preferred) if (ids.includes(p)) return p;
+  return ids.find(id => /Qwen2\.5-3B.*q4f16/i.test(id))
+      || ids.find(id => /Llama-3\.2-3B.*q4f16/i.test(id))
+      || ids.find(id => /Qwen2\.5-1\.5B/i.test(id))
+      || ids[0];
+}
+
+// Initialise the local engine exactly once. onProgress({progress,text}) drives the UI.
+function ensureEngine(onProgress) {
+  if (LLM.engine) return Promise.resolve(LLM.engine);
+  if (LLM.enginePromise) return LLM.enginePromise;
+  LLM.enginePromise = (async () => {
+    if (!webgpuAvailable()) {
+      throw new Error("This browser doesn't support WebGPU. Try Chrome or Edge 113+, or Safari 18+, on a device with a GPU.");
+    }
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) throw new Error("No compatible GPU adapter was found on this device.");
+    const webllm = await import(`https://esm.run/@mlc-ai/web-llm@${LLM.version}`);
+    LLM.modelId = pickModel(webllm);
+    LLM.engine = await webllm.CreateMLCEngine(LLM.modelId, {
+      initProgressCallback: (r) => { if (onProgress) onProgress(r); }
+    });
+    return LLM.engine;
+  })();
+  return LLM.enginePromise;
+}
+
+// OpenAI-style chat completion against the in-browser engine.
+async function llmComplete({ system, messages, max_tokens = 800, temperature = 0.6 }) {
+  const engine = await ensureEngine();
+  const msgs = [];
+  if (system) msgs.push({ role: 'system', content: system });
+  for (const m of messages) msgs.push({ role: m.role, content: m.content });
+  const resp = await engine.chat.completions.create({
+    messages: msgs,
+    max_tokens,
+    temperature,
+    stream: false
+  });
+  return (resp && resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';
+}
+
+// First-run gate: visitor downloads the model once, with a progress bar, before chatting.
+function promptModelLoad() {
+  inputEl.disabled = true;
+  sendBtn.disabled = true;
+  inputEl.placeholder = 'Load the model to begin…';
+
+  const card = `
+    <div class="plan-card" id="model-gate">
+      <h3>⚡ Run an open-source LLM in your browser</h3>
+      <p>This agent runs <strong>Qwen2.5</strong> entirely on your device via WebGPU — no server, no API key, nothing leaves this page. The first load downloads the model once (~2&nbsp;GB) and caches it for next time.</p>
+      <div class="plan-actions">
+        <button class="plan-btn" id="load-model">↓ Load model &amp; start</button>
+      </div>
+      <div id="dl-status" style="margin-top:14px;font-size:13px;display:none">
+        <div id="dl-text">Preparing…</div>
+        <div style="height:8px;border-radius:999px;background:var(--line,rgba(127,127,127,.25));overflow:hidden;margin-top:8px">
+          <div id="dl-bar" style="height:100%;width:0%;background:var(--accent,#6b8afd);transition:width .25s"></div>
+        </div>
+      </div>
+    </div>`;
+  addMessage('agent', '', card);
+
+  const btn = document.getElementById('load-model');
+  const status = document.getElementById('dl-status');
+  const bar = document.getElementById('dl-bar');
+  const txt = document.getElementById('dl-text');
+
+  if (!webgpuAvailable()) {
+    if (btn) { btn.disabled = true; btn.textContent = 'WebGPU not available'; }
+    addMessage('agent', `Heads up — this browser can't run the in-browser model because it has no WebGPU. Open this page in **Chrome or Edge (113+)** or **Safari 18+** on a laptop or desktop with a GPU, and the agent will work. Everything else on the site works regardless.`);
+    return;
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    status.style.display = 'block';
+    try {
+      await ensureEngine((r) => {
+        const pct = Math.round((r.progress || 0) * 100);
+        bar.style.width = pct + '%';
+        txt.textContent = r.text || `Loading ${LLM.modelId || 'model'}… ${pct}%`;
+      });
+      bar.style.width = '100%';
+      txt.textContent = `Ready — running ${LLM.modelId} locally.`;
+      const gate = document.getElementById('model-gate');
+      if (gate) gate.style.opacity = '0.55';
+      inputEl.disabled = false;
+      sendBtn.disabled = false;
+      inputEl.placeholder = 'Type your answer…';
+      inputEl.focus();
+      addMessage('agent', `Model loaded and running entirely on your device. Go ahead — what change are you testing, and what do you expect to happen?`);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '↓ Retry load';
+      txt.textContent = 'Error: ' + err.message;
+      addMessage('agent', `I couldn't load the model: ${err.message}`);
+    }
+  });
+}
+
 function escape(html) {
   return html
     .replace(/&/g, '&amp;')
@@ -743,7 +869,7 @@ function setActiveStage(stage) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  CLAUDE API
+//  AGENT CALL  (in-browser LLM)
 // ═══════════════════════════════════════════════════════════════
 
 const SYSTEM_PROMPT = `You are A/B Test Architect, an expert experimentation coach. You help users design rigorous, statistically valid A/B tests by walking them through a 6-stage framework. You are the work of Abdelmalek Nouri, a senior data scientist who built this as a portfolio piece.
@@ -780,7 +906,7 @@ NEVER do statistical computation yourself — the host page computes sample size
 
 Keep responses under 120 words. Be conversational, not bureaucratic.`;
 
-async function callClaude(userMessage) {
+async function callAgent(userMessage) {
   state.history.push({ role: 'user', content: userMessage });
   addTypingIndicator();
 
@@ -803,29 +929,17 @@ async function callClaude(userMessage) {
   });
 
   try {
-    const response = await fetch("/.netlify/functions/anthropic-proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: messagesForApi
-      })
+    const text = await llmComplete({
+      system: SYSTEM_PROMPT,
+      messages: messagesForApi,
+      max_tokens: 1000,
+      temperature: 0.6
     });
-    const data = await response.json();
     removeTypingIndicator();
-
-    if (!response.ok) {
-      addMessage('agent', `I hit an API error. ${data.error?.message || 'Please try again.'}`);
-      return null;
-    }
-
-    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
     return text;
   } catch (err) {
     removeTypingIndicator();
-    addMessage('agent', `Network error: ${err.message}. Please retry.`);
+    addMessage('agent', `The in-browser model hit an error: ${err.message}. Please retry.`);
     return null;
   }
 }
@@ -957,7 +1071,7 @@ function presentMdeTable() {
       btn.style.color = 'var(--bg)';
       btn.style.borderColor = 'var(--accent)';
       setActiveStage('split');
-      // Now move to split via Claude
+      // Now move to split via the agent
       askSplitQuestion();
     });
   });
@@ -1016,7 +1130,7 @@ async function generatePlan() {
   addMessage('agent', `All six stages are done. Generating your pre-registered analysis plan now — this might take a few seconds.`);
   addTypingIndicator();
 
-  // Build the plan in pure JS (deterministic) — but ask Claude to write a clean preamble paragraph
+  // Build the plan in pure JS (deterministic) — but ask the local model to write a clean preamble paragraph
   const planSummary = {
     hypothesis: state.hypothesis,
     population: state.population,
@@ -1028,23 +1142,16 @@ async function generatePlan() {
 
   let preamble = '';
   try {
-    const response = await fetch("/.netlify/functions/anthropic-proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 400,
-        system: "You write concise, professional A/B test preamble paragraphs (2-3 sentences). No headers, no bullet points, just clean prose summarizing the experiment.",
-        messages: [{
-          role: "user",
-          content: `Write a 2-3 sentence preamble for this experiment plan:\n${JSON.stringify(planSummary, null, 2)}`
-        }]
-      })
+    const out = await llmComplete({
+      system: "You write concise, professional A/B test preamble paragraphs (2-3 sentences). No headers, no bullet points, just clean prose summarizing the experiment.",
+      messages: [{
+        role: "user",
+        content: `Write a 2-3 sentence preamble for this experiment plan:\n${JSON.stringify(planSummary, null, 2)}`
+      }],
+      max_tokens: 400,
+      temperature: 0.5
     });
-    const data = await response.json();
-    if (response.ok) {
-      preamble = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
-    }
+    preamble = (out || '').trim();
   } catch (e) { /* fall through, preamble stays empty */ }
 
   removeTypingIndicator();
@@ -1246,7 +1353,7 @@ async function handleUserMessage(text) {
   inputEl.style.height = 'auto';
   sendBtn.disabled = true;
 
-  const response = await callClaude(text);
+  const response = await callAgent(text);
   sendBtn.disabled = false;
 
   if (!response) return;
@@ -1275,6 +1382,7 @@ What change are you testing, and what do you expect to happen?
 *For example: "I want to test a new onboarding flow — I expect higher first-week retention." Or paste your actual product/marketing brief and I'll help structure it.*`;
   addMessage('agent', intro);
   state.history.push({ role: 'assistant', content: intro });
+  promptModelLoad();
 }
 
 sendBtn.addEventListener('click', () => handleUserMessage(inputEl.value));
